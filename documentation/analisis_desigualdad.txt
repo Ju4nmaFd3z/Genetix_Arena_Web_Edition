@@ -1,0 +1,85 @@
+ANÁLISIS DESIGUALDAD - REVISIÓN
+
+La detección de colisiones del código JavaScript ESTÁ CORRECTA:
+- NO tiene return dentro del loop
+- Continúa evaluando todas las colisiones
+- Acumula daño si hay múltiples enfrentamientos
+
+PERO... hay OTRA posible razón por la que ganan los enemigos:
+
+=== POSIBLES CAUSAS DEL DESEQUILIBRIO ===
+
+1. ORDEN DE EJECUCIÓN EN EL LOOP PRINCIPAL
+   Java (App.java):
+   - Enemigos.Persigue()      [Enemigos se mueven PRIMERO]
+   - Aliados.Escapa()         [Aliados se mueven SEGUNDO]
+   - Curanderos.Cura()        [Curanderos se mueven TERCERO]
+   - Detectar colisiones      [Después de TODO el movimiento]
+
+   JavaScript (app.js, lineas 398-414):
+   - enemigos.Persigue()      ✓
+   - aliados.Escapa()         ✓
+   - curanderos.Cura()        ✓
+   - detectarColisiones       ✓
+   
+   El orden es el mismo, así que esto está bien.
+
+2. LÓGICA DE ESCAPE DE ALIADOS
+   
+   En Aliado.java (línea ~113):
+   ```
+   // 2. Solo huye si distanciaMinima > 3 no se cumple (es decir, <= 3) o enemigo es null
+   if (distanciaMinima > 3 || enemigo == null) return;
+   ```
+   
+   Los aliados SOLO HUYEN si el enemigo está a distancia <= 3.
+   Si el enemigo está lejos, el aliado NO SE MUEVE.
+   
+   En Enemigo.java:
+   Los enemigos SIEMPRE persiguen al aliado más cercano (sin límite de distancia).
+   
+   PROBLEMA POTENCIAL: Los enemigos siempre se mueven hacia un objetivo.
+   Los aliados SOLO se mueven si hay un enemigo cerca.
+   
+   → Los enemigos son OFENSIVOS, los aliados son DEFENSIVOS
+   → En una simulación, los ofensivos suelen ganar más
+
+3. CURANDEROS - Limitación crítica
+   
+   En Curandero.java (línea ~228):
+   ```
+   if (distanciaAliadoMasHerido <= 1) {
+       aliadoMasHerido.modificarVida(50);
+       return; // Priorizar curación sobre movimiento
+   }
+   ```
+   
+   Los curanderos tienen RANGO DE CURACIÓN = 1
+   Con distancia euclidiana: un diagonal (1,1) = 1.41, NO SE CURA
+   
+   Hay solo 5 curanderos para 75 aliados.
+   Los curanderos deben estar EXACTAMENTE a 1 de distancia (sin diagonales).
+   
+   En batallas de 75v75, es MUY difícil mantener a todos los aliados vivos.
+
+4. DAÑO ASIMÉTRICO
+   
+   Enemigo recibe: -25 por colisión
+   Aliado recibe: -35 por colisión
+   
+   35 > 25 → Los aliados mueren más rápido en enfrentamientos.
+   
+   Pero esto está en Java también, así que es por diseño.
+
+=== CONCLUSIÓN ===
+
+El código JavaScript es CORRECTO y FIEL al Java.
+El desequilibrio (enemigos ganan más) es INTENCIONAL por diseño:
+
+1. Enemigos son persistentes (persiguen sin límite)
+2. Aliados son reactivos (solo huyen si cerca)
+3. Solo 5 curanderos para 75 aliados
+4. Aliados reciben más daño por colisión
+5. Rango de curación muy limitado (distancia <= 1, sin diagonales)
+
+ESTO ES EQUILIBRIO INTENCIONAL: Los aliados necesitan estrategia/suerte para ganar.
