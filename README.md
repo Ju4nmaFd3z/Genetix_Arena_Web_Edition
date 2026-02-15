@@ -105,8 +105,8 @@ GenetixArenaWeb/
 **Juanma Fdez**  
 *Desarrollador Junior Full Stack (In-Progress) & Creador de Genetix Arena.*
 
-- [Portfolio Web](https://tu-portfolio.com)
-- [Repositorio Java Original](https://github.com/tu-usuario/genetix-java)
+- [Portfolio Web](https://juanma-dev-portfolio.vercel.app/)
+- [Repositorio Java Original](https://github.com/Ju4nmaFd3z/Genetix_Arena.git)
 
 ---
 
