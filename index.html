@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genetix Arena - Web Edition</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Fuente moderna -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;500;700&family=Inter:wght@300;400;600&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- FONDO ANIMADO -->
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div class="main-container glass-panel">
+
+        <!-- SECCIÓN 1: LANDING PAGE -->
+        <section id="landing-section" class="active-section">
+            <header class="landing-header">
+                <h1 class="glitch-text" data-text="GENETIX ARENA">GENETIX ARENA</h1>
+                <p class="subtitle">JAVA TO JS MIGRATION // V 3.0 WEB</p>
+            </header>
+
+            <div class="config-grid">
+                <!-- TARJETA 1: CONFIGURACIÓN -->
+                <div class="config-card">
+                    <h3>Protocolo de Inicialización</h3>
+
+                    <div class="input-group">
+                        <label>Tasa de Procesamiento (TickRate)</label>
+                        <select id="sim-speed">
+                            <option value="400">Modo Análisis [400ms]</option>
+                            <option value="200" selected>Ejecución Estándar [200ms]</option>
+                            <option value="50">Overclock (Turbo) [50ms]</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label>Motor de Visualización</label>
+                        <select id="render-quality">
+                            <option value="neon">Neon Pulse (GPU High)</option>
+                            <option value="flat">Wireframe Mode (Low Latency)</option>
+                        </select>
+                    </div>
+
+                    <!-- Elemento decorativo extra para dar "flavor" -->
+                    <div
+                        style="margin-top: 15px; font-size: 0.75rem; color: var(--text-muted); border-top: 1px solid var(--glass-border); padding-top: 10px;">
+                        <span>PROYECTO: </span><span
+                            style="font-family: monospace; color: var(--primary-accent);">2º TRIMESTRE - PROGRAMACIÓN</span>
+                    </div>
+                </div>
+
+                <!-- TARJETA 2: INFORMACIÓN DEL PROYECTO -->
+                <div class="config-card info-card">
+                    <h3>Información del Proyecto</h3>
+                    <ul
+                        style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;">
+                        <li
+                            style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 5px;">
+                            <span><span class="status-dot green"></span> Versión</span>
+                            <strong style="font-family: monospace; color: #10b981;">3.0 WEB EDITION</strong>
+                        </li>
+                        <li
+                            style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 5px;">
+                            <span><span class="status-dot green"></span> Tecnología</span>
+                            <strong style="font-family: monospace;">Canvas + ES6+</strong>
+                        </li>
+                        <li
+                            style="display: flex; justify-content: space-between; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 5px;">
+                            <span><span class="status-dot green"></span> Mapeo</span>
+                            <strong style="font-family: monospace;">75x25 GRID</strong>
+                        </li>
+                        <li style="display: flex; justify-content: space-between; padding-top: 5px;">
+                            <span><span class="status-dot"
+                                    style="background: #f59e0b; box-shadow: 0 0 5px #f59e0b;"></span> Autor</span>
+                            <strong style="font-family: monospace;">Juanma Fernández</strong>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="action-area">
+                <button id="btn-start" class="btn-primary">
+                    <span class="btn-content">INICIALIZAR COMBATE</span>
+                    <span class="btn-glare"></span>
+                </button>
+            </div>
+
+            <footer class="landing-footer">
+                <a href="https://github.com/Ju4nmaFd3z/Genetix_Arena.git" target="_blank" class="link-item">Repo Java
+                    Original</a>
+                <span class="separator">|</span>
+                <a href="https://github.com/Ju4nmaFd3z/Genetix_Arena_Web_Edition.git" target="_blank" class="link-item">Repo Web JS</a>
+                <span class="separator">|</span>
+                <a href="https://juanma-dev-portfolio.vercel.app/" target="_blank" class="link-item author-link">Portfolio Autor</a>
+            </footer>
+        </section>
+
+        <!-- SECCIÓN 2: JUEGO (ARENA) -->
+        <section id="game-section" class="hidden-section">
+            <div class="game-layout">
+
+                <!-- Columna Izquierda: El Juego -->
+                <div class="arena-container">
+                    <div class="arena-header">
+                        <h2>Simulación en Curso</h2>
+                        <div class="live-indicator"><span class="blink">●</span> LIVE</div>
+                    </div>
+                    <canvas id="gameCanvas" width="1500" height="500"></canvas>
+                    <div id="game-msg" class="console-log">Esperando instrucciones...</div>
+                </div>
+
+                <!-- Columna Derecha: Panel de Control -->
+                <aside class="sidebar glass-panel-inner">
+                    <div class="stats-box">
+                        <h3>Métricas en Tiempo Real</h3>
+
+                        <div class="stat-row" style="--color: #4dffb8">
+                            <span class="label">Aliados</span>
+                            <span class="value" id="count-aliados">0</span>
+                            <div class="bar-container">
+                                <div class="bar" id="bar-aliados"></div>
+                            </div>
+                        </div>
+
+                        <div class="stat-row" style="--color: #ff4d4d">
+                            <span class="label">Enemigos</span>
+                            <span class="value" id="count-enemigos">0</span>
+                            <div class="bar-container">
+                                <div class="bar" id="bar-enemigos"></div>
+                            </div>
+                        </div>
+
+                        <div class="stat-row" style="--color: #4d94ff">
+                            <span class="label">Curanderos</span>
+                            <span class="value" id="count-curanderos">0</span>
+                        </div>
+
+                        <div class="stat-row" style="--color: #ffda4d">
+                            <span class="label">Obstáculos</span>
+                            <span class="value" id="count-obstaculos">0</span>
+                        </div>
+                    </div>
+
+                    <div class="control-box">
+                        <h3>Controles</h3>
+                        <button id="btn-pause" class="btn-secondary">Pausar</button>
+                        <button id="btn-reload" class="btn-secondary">Reiniciar</button>
+                        <button id="btn-exit" class="btn-danger">Salir al Menú</button>
+                    </div>
+
+                    <div class="author-tag">
+                        Dev by Juanma Fdez
+                    </div>
+                </aside>
+            </div>
+        </section>
+
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+
+</html>

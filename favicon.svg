@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Fondo circular oscuro -->
+  <circle cx="32" cy="32" r="31" fill="#09090b" stroke="#2d2d35" stroke-width="1"/>
+  
+  <!-- Hélice de ADN - Hebra 1 (Verde Neón) -->
+  <path d="M22 18 Q 27 23 32 28 Q 37 33 32 38 Q 27 43 22 48" 
+        stroke="#00ff88" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Hélice de ADN - Hebra 2 (Azul Púrpura) -->
+  <path d="M42 18 Q 37 23 32 28 Q 27 33 32 38 Q 37 43 42 48" 
+        stroke="#6366f1" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Pares de bases - Conectores en Naranja/Oro -->
+  <!-- Par 1 -->
+  <line x1="24" y1="21" x2="40" y2="21" stroke="#ff8c42" stroke-width="2" opacity="0.85"/>
+  
+  <!-- Par 2 -->
+  <line x1="26" y1="27" x2="38" y2="27" stroke="#ff8c42" stroke-width="2" opacity="0.85"/>
+  
+  <!-- Par 3 (centro) -->
+  <line x1="27" y1="33" x2="37" y2="33" stroke="#ff8c42" stroke-width="2" opacity="0.85"/>
+  
+  <!-- Par 4 -->
+  <line x1="26" y1="39" x2="38" y2="39" stroke="#ff8c42" stroke-width="2" opacity="0.85"/>
+  
+  <!-- Par 5 -->
+  <line x1="24" y1="45" x2="40" y2="45" stroke="#ff8c42" stroke-width="2" opacity="0.85"/>
+</svg>
