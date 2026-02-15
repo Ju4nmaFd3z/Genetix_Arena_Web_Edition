@@ -76,6 +76,8 @@ GenetixArenaWeb/
 ├── index.html        # Punto de entrada. Estructura SPA y Canvas.
 ├── favicon.svg
 ├── README.md
+├── documentation/
+│   └── analisis_desigualdad.txt
 ├── css/
 │   └── style.css     # Estilos CSS3, animaciones y diseño Glassmorphism.
 └── js/
