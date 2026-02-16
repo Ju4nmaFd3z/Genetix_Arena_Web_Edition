@@ -1,0 +1,93 @@
+================================================================================
+          GENETIX ARENA | CORE SIMULATION SYSTEM v3.3 - DOCUMENTATION
+================================================================================
+
+PROYECTO: Genetix Arena Web Edition
+VERSIÓN: 3.3 (Stable Build)
+ARQUITECTURA: JavaScript ES6+ / HTML5 Canvas / CSS3 Grid
+TIPO: Simulación Táctica de IA Autónoma (Single Page Application)
+AUTOR: Juanma Fernández
+
+--------------------------------------------------------------------------------
+1. DESCRIPCIÓN GENERAL
+--------------------------------------------------------------------------------
+Genetix Arena es un simulador de combate estratégico donde múltiples entidades
+dotadas de inteligencia artificial heurística interactúan en un entorno de 
+rejilla (grid) de 75x25 celdas. 
+
+El proyecto nace como una migración estricta de un motor original desarrollado 
+en Java puro, portando la lógica de programación orientada a objetos (POO) a 
+un entorno web moderno y optimizado.
+
+--------------------------------------------------------------------------------
+2. LÓGICA DE ENTIDADES (AI PROTOCOLS)
+--------------------------------------------------------------------------------
+El núcleo del sistema gestiona cuatro tipos de entidades:
+
+A. ALIADOS (Ops): 
+   - Objetivo: Supervivencia.
+   - Comportamiento: Detectan al enemigo más cercano dentro de un radio de 3 
+     celdas. Calculan el vector de movimiento opuesto para maximizar la 
+     distancia de escape.
+
+B. ENEMIGOS (Hostiles):
+   - Objetivo: Eliminación de objetivos.
+   - Comportamiento: Localizan al aliado más cercano en cualquier punto del mapa
+     y calculan el vector de aproximación más corto basado en distancia 
+     euclidiana.
+
+C. CURANDEROS (Med-Units):
+   - Objetivo: Soporte logístico.
+   - Comportamiento: Priorizan al aliado con el menor porcentaje de vida dentro 
+     de un radio de 10 celdas. Si la distancia es <= 1, ejecutan el protocolo 
+     de curación (+50 HP).
+
+D. OBSTÁCULOS:
+   - Entidades estáticas con colisión física que bloquean rutas de navegación.
+
+--------------------------------------------------------------------------------
+3. PARIDAD TÉCNICA (JAVA PORT SPECIFICATIONS)
+--------------------------------------------------------------------------------
+Para garantizar la fidelidad con el repositorio original, se han respetado los 
+siguientes parámetros matemáticos:
+
+- DAÑO RECIBIDO (Aliados): 35 HP por colisión.
+- DAÑO RECIBIDO (Enemigos): 25 HP por colisión.
+- RANGO DE CURACIÓN: Estricto (distancia <= 1.0). Debido al cálculo euclidiano, 
+  la distancia diagonal (1.41) se considera fuera de rango.
+- LÓGICA DE COLISIÓN: Permisiva. Ocurre si la suma de diferenciales (dx + dy) 
+  es <= 2, permitiendo daño en adyacencia directa y diagonal.
+- TICKRATE: Controlado mediante requestAnimationFrame, emulando los ciclos de 
+  reloj de Java Threads.
+
+--------------------------------------------------------------------------------
+4. INTERFAZ Y RENDERIZADO (TACTICAL HUD)
+--------------------------------------------------------------------------------
+La v3.3 introduce una interfaz de usuario avanzada centrada en la legibilidad:
+
+- MOTOR DE RENDERIZADO DUAL:
+  - Modo Neon: Renderizado con Bloom Effect (ShadowBlur) para alta visibilidad.
+  - Modo Flat: Renderizado limpio sin post-procesado para máxima performance.
+- MODO CINE (EXPAND/REDUCE): Implementación CSS-Pure que permite la expansión
+  del viewport táctico ocultando la telemetría lateral.
+- RESPONSIVIDAD: Grid adaptativo que reorganiza los paneles de telemetría y 
+  comandos según la resolución del dispositivo.
+
+--------------------------------------------------------------------------------
+5. REQUISITOS DE INSTALACIÓN
+--------------------------------------------------------------------------------
+El software es "Zero Dependencies" (Vanilla JS).
+
+1. Clonar repositorio.
+2. Ejecutar index.html en navegador (se recomienda extensión Live Server).
+3. Browser recomendado: Chrome / Edge / Firefox (Webkit-based).
+
+--------------------------------------------------------------------------------
+6. REFERENCIAS
+--------------------------------------------------------------------------------
+- Repositorio Original (Java): https://github.com/Ju4nmaFd3z/Genetix_Arena.git
+- Portafolio del Autor: https://juanma-dev-portfolio.vercel.app/
+
+--------------------------------------------------------------------------------
+                               © 2026 GENETIX                                   
+--------------------------------------------------------------------------------

@@ -1,16 +1,12 @@
 /**
- * GENETIX ARENA WEB - STRICT JAVA PORT
- * Autor Original: Juanma Fdez
- * 
- * NOTA: Se ha mantenido la lógica EXACTA del Java.
- * - Daño: Aliados reciben 35, Enemigos 25.
- * - Curación: Solo distancia <= 1 (No cura en diagonales estrictas).
- * - Combate: Sí permite diagonales ((dx+dy) <= 2).
+ * GENETIX ARENA - WEB EDITION
+ * Autor : Juanma Fdez
  */
 
 // --- CONFIGURACIÓN DE UI & ESTADO GLOBAL ---
 const GAME_CONFIG = {
     renderSpeed: 200, // Igual a Thread.sleep(200)
+    quality: 'neon', 
     ALTO: 25,
     ANCHO: 75,
     CELL_SIZE: 20
@@ -27,7 +23,8 @@ const UI = {
         obstaculos: document.getElementById('count-obstaculos'),
         msg: document.getElementById('game-msg'),
         barAliados: document.getElementById('bar-aliados'),
-        barEnemigos: document.getElementById('bar-enemigos')
+        barEnemigos: document.getElementById('bar-enemigos'),
+        header: document.querySelector('.top-bar') 
     },
     screens: {
         landing: document.getElementById('landing-section'),
@@ -113,9 +110,7 @@ class Aliado extends Entidad {
         // OJO: Tu código Java dice: if (distanciaMinima > 3 || enemigo == null) return;
         if (distanciaMinima > 3 || enemigo === null) return;
 
-        let menorDistancia = 0; // Buscamos ALEJARNOS, así que buscaremos el valor más alto posible comparado con 0?
-        // ESPERA, en tu Java: if (distancia > menorDistancia). Inicializas menorDistancia en 0.
-        // Significa que buscas maximizar la distancia. Correcto.
+        let menorDistancia = 0; // Buscamos ALEJARNOS, así que buscaremos el valor más alto posible comparado con 0
 
         let mejorVx = 0;
         let mejorVy = 0;
@@ -287,7 +282,7 @@ const MisFunciones = {
     },
 
     detectarYResolverColisiones: (listaEnemigos, listaAliados) => {
-        let evento = "Esperando contacto...";
+        let evento = "SISTEMA OK. SIN NOVEDADES.";
         
         // Doble bucle EXACTO al Java
         for (let enemigo of listaEnemigos) {
@@ -347,9 +342,14 @@ function redibujarMapa() {
         let vidaPct = entidad.getVida() / 100;
 
         UI.ctx.fillStyle = color;
-        // Efecto Neon simple
-        UI.ctx.shadowBlur = 10; 
-        UI.ctx.shadowColor = color;
+        
+        // --- Aplicar Neon solo si está seleccionado ---
+        if (GAME_CONFIG.quality === 'neon') {
+            UI.ctx.shadowBlur = 10; 
+            UI.ctx.shadowColor = color;
+        } else {
+            UI.ctx.shadowBlur = 0; // Flat mode
+        }
 
         if (tipo === 'obstaculo') {
             UI.ctx.fillRect(x + 2, y + 2, 16, 16);
@@ -411,7 +411,7 @@ function gameLoop(timestamp) {
 
             // 4. Colisiones
             let evento = MisFunciones.detectarYResolverColisiones(listas.enemigos, listas.aliados);
-            if(evento !== "Esperando contacto...") UI.elements.msg.innerText = evento;
+            if(evento !== "SISTEMA OK. SIN NOVEDADES.") UI.elements.msg.innerText = evento;
 
             // 5. Limpiar Muertos
             MisFunciones.limpiarMuertos(listas.enemigos, listas.aliados);
@@ -459,7 +459,7 @@ function initGame() {
     spawnEntities(Aliado, 75, listas.aliados);
     spawnEntities(Curandero, 5, listas.curanderos);
     
-    UI.elements.msg.innerText = "Simulación inicializada.";
+    UI.elements.msg.innerText = "SIMULACIÓN INICIADA.";
     gameState.running = true;
     gameState.paused = false;
     gameState.lastTime = 0;
@@ -505,36 +505,48 @@ document.getElementById('btn-start').addEventListener('click', () => {
     // Leer config de selectores
     let speedVal = document.getElementById('sim-speed').value;
     GAME_CONFIG.renderSpeed = parseInt(speedVal);
+    
+    // Leer y guardar el modo de renderizado
+    GAME_CONFIG.quality = document.getElementById('render-quality').value;
+
+    // Ocultar borde del header y mostrar botón Expandir
+    UI.elements.header.classList.add('hide-border');
+    UI.elements.header.classList.add('show-expand');
 
     // Switch screens
-    UI.screens.landing.classList.remove('active-section');
+    UI.screens.landing.classList.remove('active-section'); 
     UI.screens.landing.classList.add('hidden-section');
-    setTimeout(() => {
-        UI.screens.game.classList.remove('hidden-section');
-        UI.screens.game.classList.add('active-section');
-        initGame();
+    setTimeout(() => { 
+        UI.screens.game.classList.remove('hidden-section'); 
+        UI.screens.game.classList.add('active-section'); 
+        initGame(); 
     }, 500);
 });
 
 document.getElementById('btn-pause').addEventListener('click', function() {
     gameState.paused = !gameState.paused;
-    this.innerText = gameState.paused ? "Reanudar" : "Pausar";
+    this.innerText = gameState.paused ? "REANUDAR" : "PAUSAR";
 });
 
 document.getElementById('btn-reload').addEventListener('click', () => {
     cancelAnimationFrame(gameState.animFrame);
     initGame();
-    UI.elements.msg.innerText = "Reiniciando...";
-    UI.elements.msg.style.color = '#a1a1aa';
+    UI.elements.msg.innerText = "REINICIANDO...";
+    UI.elements.msg.style.color = '#8A8A93';
 });
 
 document.getElementById('btn-exit').addEventListener('click', () => {
     gameState.running = false;
     cancelAnimationFrame(gameState.animFrame);
-    UI.screens.game.classList.remove('active-section');
+    
+    // Mostrar borde del header y ocultar botón Expandir
+    UI.elements.header.classList.remove('hide-border');
+    UI.elements.header.classList.remove('show-expand');
+
+    UI.screens.game.classList.remove('active-section'); 
     UI.screens.game.classList.add('hidden-section');
-    setTimeout(() => {
-        UI.screens.landing.classList.remove('hidden-section');
-        UI.screens.landing.classList.add('active-section');
+    setTimeout(() => { 
+        UI.screens.landing.classList.remove('hidden-section'); 
+        UI.screens.landing.classList.add('active-section'); 
     }, 500);
 });

@@ -1,70 +1,67 @@
-# 🧬 GENETIX ARENA | Web Edition
+# 🧬 GENETIX ARENA | Web Edition v3.3
 
-![Version](https://img.shields.io/badge/Version-3.0-blue)
-![Tech](https://img.shields.io/badge/Tech-%20Canvas%20%7C%20CSS3-yellow)
+![Version](https://img.shields.io/badge/Version-3.3--Stable-indigo)
+![Tech](https://img.shields.io/badge/Tech-JS%20ES6+%20%7C%20Canvas%202D-green)
+![Design](https://img.shields.io/badge/Design-Deep%20Space%20Tactical-blue)
 
-> **Versión web moderna y fiel del simulador de combate estratégico "Genetix Arena".**  
-> Migrado desde Java puro a JavaScript (ES6+) manteniendo la lógica exacta del motor original bajo una interfaz moderna inspirada en **Liquid Glass**.
-
----
-
-## 📋 Descripción
-
-**Genetix Arena Web** es una simulación de batalla autónoma donde distintas entidades (Aliados, Enemigos y Curanderos) interactúan en un mapa grid de 75x25. El proyecto no es solo una visualización, sino una **migración estricta** de la lógica de programación orientada a objetos de Java a JavaScript.
-
-El objetivo es visualizar cómo se comporta la Inteligencia Artificial (IA) de las entidades:
-- **Aliados:** Huyen de enemigos y buscan sobrevivir.
-- **Enemigos:** Cazan aliados usando algoritmos de búsqueda de caminos.
-- **Curanderos:** Priorizan y sanan a los aliados más heridos.
-
-Todo esto renderizado en un **HTML5 Canvas** de alto rendimiento con efectos de neón y una interfaz de usuario minimalista y responsiva.
+> **Plataforma de simulación autónoma de combate basada en algoritmos de comportamiento de enjambre.**  
+> Una migración de alta fidelidad desde Java puro a una arquitectura web moderna, bajo una interfaz de grado corporativo inspirada en sistemas HUD militares y dashboards tácticos de alta gama.
 
 ---
 
-## ✨ Características Principales
+## 📋 Descripción del Sistema
 
-### 🎨 Diseño & UI
-- **Estética Liquid Glass:** Interfaz moderna con efectos de desenfoque (`backdrop-filter`), transparencias y sombras suaves.
-- **Single Page Application (SPA):** Transiciones fluidas entre la Landing Page de configuración y la Arena de combate sin recargas.
-- **Renderizado Dinámico:** Opción para alternar entre modo "Neon Glow" (alto detalle) y modo plano.
+**Genetix Arena v3.3** es un entorno de simulación táctica donde entidades con Inteligencia Artificial (IA) interactúan en tiempo real dentro de un grid de 75x25. El proyecto representa una **migración estricta** de la lógica de programación orientada a objetos (POO) de Java a JavaScript funcional y ES6+, garantizando paridad matemática absoluta con el motor original.
 
-### ⚙️ Motor de Simulación (Core)
-- **Grid System:** Mapa de 75x25 celdas con detección de colisiones en tiempo real.
-- **IA de 8 Direcciones:** Las entidades evalúan las 8 casillas adyacentes para tomar la decisión óptima de movimiento (huida o persecución).
-- **Game Loop Controlado:** Sistema de `requestAnimationFrame` sincronizado para emular la velocidad original de Java (`Thread.sleep`).
-
-### 📊 Panel de Control
-- Estadísticas en tiempo real con barras de progreso dinámicas.
-- Controles de **Pausa**, **Reanudar** y **Reinicio** instantáneo.
-- Configuración de velocidad de simulación (Lenta, Normal, Turbo).
+### Comportamiento de Entidades (IA):
+- **Aliados (Green Ops):** Protocolos de evasión. Detectan amenazas y buscan rutas de escape optimizadas.
+- **Enemigos (Hostiles):** Algoritmos de caza. Persiguen a los aliados mediante cálculo de distancia euclidiana en tiempo real.
+- **Curanderos (Med-Units):** Priorización de objetivos heridos y soporte logístico dentro de un radio de acción específico.
 
 ---
 
-## 🔧 Paridad con Java Original
+## ✨ Características de la Versión 3.3
 
-La migración se ha realizado respetando escrupulosamente la lógica matemática del repositorio original en Java para garantizar el mismo resultado en la simulación:
+### 🖥️ Interfaz Táctica (HUD)
+- **Diseño "Airy" Profesional:** Layout optimizado con amplios márgenes y espaciado ("White Space") para evitar la fatiga visual y mejorar la legibilidad de datos.
+- **Bento Grid Layout:** Organización de información en paneles modulares e independientes (Telemetría, Comandos, Consola).
+- **Modo Cine (Expand/Reduce):** Funcionalidad inmersiva que permite ocultar el panel de datos para maximizar la vista del dron a pantalla completa.
+- **Responsive Adaptive Core:** Rediseño total de la rejilla para dispositivos móviles, transformando el dashboard en una interfaz vertical fluida sin solapamiento de elementos.
 
-| Lógica | Implementación |
-| :--- | :--- |
-| **Daño** | Enemigos reciben **25 de daño** / Aliados reciben **35 de daño** en cada colisión. |
-| **Curación** | Estricta. Solo cura si `distancia <= 1` (No cura en diagonales, ya que la distancia es 1.41). |
-| **Colisiones** | Permisiva. Ocurre si `(dx + dy) <= 2` (Permite daño en diagonales). |
-| **Movimiento** | Algoritmo de evaluación de vector óptimo basado en distancia euclidiana. |
+### ⚙️ Motor de Simulación y Renderizado
+- **Dual-Engine Rendering:** 
+    - *Neon Pulse:* Efectos de brillo (bloom) y sombras dinámicas aceleradas por GPU.
+    - *Wireframe Mode:* Renderizado plano de baja latencia para máxima eficiencia energética en dispositivos antiguos.
+- **Simulation Loop:** Sincronización mediante `requestAnimationFrame` para emular el comportamiento de hilos (`Threads`) del código Java original.
+- **Telemetría Dinámica:** Barras de estado y contadores vinculados directamente a las instancias de la clase `Entidad`.
 
 ---
 
-## 🚀 Instalación y Despliegue
+## 🔧 Paridad Técnica (Java Port)
 
-Este proyecto no requiere dependencias de Node.js ni procesos de compilación. Es **Vanilla JS** puro.
+Se ha respetado escrupulosamente la lógica matemática del repositorio original para garantizar resultados idénticos:
 
-### Ejecución Local
-1. Clona el repositorio:
-   ```bash
-   git clone https://github.com/Ju4nmaFd3z/Genetix_Arena_Web_Edition.git
-   ```
-2. Abre la carpeta del proyecto.
-3. Haz doble clic en el archivo `index.html` para abrirlo en tu navegador predeterminado.
-   - *Recomendación:* Para una mejor experiencia con las rutas relativas y fuentes, usa una extensión como **Live Server** en VS Code.
+| Métrica | Valor Lógico | Observaciones |
+| :--- | :--- | :--- |
+| **Daño Hostil** | -35 Vida | Los aliados son más vulnerables al contacto. |
+| **Daño Aliado** | -25 Vida | Los enemigos tienen una mayor resistencia base. |
+| **Protocolo de Salud** | `distancia <= 1` | Curación estricta (no permite diagonales por distancia euclidiana 1.41). |
+| **Detección de Colisión** | `(dx + dy) <= 2` | Lógica permisiva que permite el combate en diagonal. |
+| **Frecuencia de Tick** | 50ms - 400ms | Control variable del loop de procesamiento. |
+
+---
+
+## 🚀 Despliegue e Instalación
+
+Este simulador es **Vanilla JS** puro. No requiere Node.js, compiladores ni dependencias externas.
+
+1.  **Clonar:**
+    ```bash
+    git clone https://github.com/Ju4nmaFd3z/Genetix_Arena_Web_Edition.git
+    ```
+2.  **Ejecutar:** 
+    Simplemente abre `index.html` en cualquier navegador moderno.
+    *Para la mejor experiencia visual, se recomienda utilizar navegadores basados en Chromium.*
 
 ---
 
@@ -86,30 +83,17 @@ GenetixArenaWeb/
 
 ---
 
-## 🎮 Controles
-
-1. **Landing Page:**
-   - Selecciona la **Velocidad** de la simulación (Normal recomendado).
-   - Elige el **Renderizado** (Neon recomendado para PC, Flat para móviles antiguos).
-   - Haz clic en **INICIALIZAR COMBATE**.
-
-2. **Arena:**
-   - Observa la simulación automática.
-   - Usa el botón **Pausar** para detener el tiempo y analizar posiciones.
-   - Usa **Reiniciar** para generar un nuevo mapa aleatorio con las mismas configuraciones.
-
----
-
-## ✒️ Autor
+## ✒️ Autor y Créditos
 
 **Juanma Fdez**  
-*Desarrollador Junior Full Stack (In-Progress) & Creador de Genetix Arena.*
+*Desarrollador Full Stack (In-Progress) & Arquitecto de Sistemas Genetix.*
 
-- [Portfolio Web](https://juanma-dev-portfolio.vercel.app/)
-- [Repositorio Java Original](https://github.com/Ju4nmaFd3z/Genetix_Arena.git)
+- [🌐 Portfolio Profesional](https://juanma-dev-portfolio.vercel.app/)
+- [☕ Repositorio Java Original](https://github.com/Ju4nmaFd3z/Genetix_Arena.git)
+- [🛠️ Repositorio JS (Versión Actual)](https://github.com/Ju4nmaFd3z/Genetix_Arena_Web_Edition.git)
 
 ---
 
 ## 📄 Licencia
 
-Este proyecto está bajo la Licencia MIT - eres libre de usarlo, modificarlo y distribuirlo mencionando al autor original.
+Este software se distribuye bajo la **Licencia MIT**. Siéntete libre de auditar el código, clonarlo o escalarlo, siempre mencionando la autoría original del proyecto.

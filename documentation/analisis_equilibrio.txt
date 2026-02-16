@@ -1,0 +1,60 @@
+================================================================================
+          GENETIX ARENA | INFORME DE EQUILIBRIO Y ANÁLISIS DE DATOS
+================================================================================
+
+ESTADO DEL PORT: Fiel al motor original (Paridad 1:1)
+SISTEMA: Análisis de Desigualdad en Simulación de Combate
+FECHA: 2026
+
+--------------------------------------------------------------------------------
+1. VERIFICACIÓN DE INTEGRIDAD DEL CÓDIGO
+--------------------------------------------------------------------------------
+La detección de colisiones en el motor JavaScript se ha auditado con éxito:
+- NO existen retornos (return) prematuros dentro del bucle de colisión.
+- Evaluación continua: Se procesan todas las interacciones por frame.
+- Daño acumulativo: El sistema permite múltiples impactos simultáneos.
+
+--------------------------------------------------------------------------------
+2. CAUSAS TÉCNICAS DEL DESEQUILIBRIO (BIAS)
+--------------------------------------------------------------------------------
+
+A. ASIMETRÍA OFENSIVA VS REACTIVA:
+   - ENEMIGOS (Agresores): Poseen un algoritmo de persecución persistente sin 
+     límite de rango. Siempre se desplazan hacia el objetivo.
+   - ALIADOS (Defensores): Poseen un algoritmo reactivo. Solo inician el 
+     protocolo de huida si la amenaza se encuentra a una distancia <= 3.
+   - RESULTADO: Los enemigos mantienen la iniciativa táctica, mientras que los 
+     aliados permanecen estáticos y vulnerables si no hay contacto cercano.
+
+B. LIMITACIÓN CRÍTICA DE MED-UNITS (HEALERS):
+   - El protocolo de curación requiere una proximidad extrema (distancia <= 1).
+   - Debido al cálculo de distancia euclidiana, una posición diagonal (1.41) 
+     se considera fuera de rango. Solo las casillas adyacentes directas 
+     activan la restauración de vida.
+   - Ratio de soporte: 5 curanderos para 75 aliados (6.6% de cobertura).
+
+C. DIFERENCIAL DE RESISTENCIA (HP LOSS):
+   - Daño recibido por Hostiles: 25 HP.
+   - Daño recibido por Aliados: 35 HP.
+   - IMPACTO: Los aliados poseen un 40% menos de resistencia efectiva por 
+     enfrentamiento individual.
+
+--------------------------------------------------------------------------------
+3. CONCLUSIÓN DEL ANALISTA
+--------------------------------------------------------------------------------
+El motor JavaScript es una representación FIEL y EXACTA del sistema original 
+en Java. El desequilibrio observado (mayor tasa de victoria para hostiles) no 
+es un error de implementación, sino una característica intrínseca del diseño 
+original del ecosistema:
+
+1. Agresividad constante de los hostiles.
+2. Comportamiento defensivo/pasivo de los aliados.
+3. Vulnerabilidad táctica por ratio de daño asimétrico.
+4. Soporte logístico limitado por geometría euclidiana estricta.
+
+SISTEMA VALIDADO: El equilibrio es intencional. Los aliados requieren de 
+estrategia posicional y superioridad numérica para prevalecer.
+
+--------------------------------------------------------------------------------
+                               © 2026 GENETIX                                   
+--------------------------------------------------------------------------------
