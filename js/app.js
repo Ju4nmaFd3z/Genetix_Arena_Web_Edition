@@ -1,18 +1,43 @@
 /**
- * GENETIX ARENA - WEB EDITION
+ * GENETIX ARENA - WEB EDITION v4.2 (Big Zoom & Full Fill)
  * Autor : Juanma Fdez
  */
 
 // --- CONFIGURACIÓN DE UI & ESTADO GLOBAL ---
 const GAME_CONFIG = {
-    renderSpeed: 200, // Igual a Thread.sleep(200)
+    renderSpeed: 200, 
     quality: 'neon', 
-    ALTO: 25,
-    ANCHO: 75,
-    CELL_SIZE: 20
+    
+    // --- CAMBIOS PARA AGRANDAR EL TABLERO ---
+    // Antes: 75x25 (Formato muy ancho) con celdas de 20px
+    // Ahora: 36x20 (Formato 16:9) con celdas de 40px (EL DOBLE DE GRANDE)
+    ALTO: 20,
+    ANCHO: 36,
+    CELL_SIZE: 40, // Zoom x2
+    
+    colors: {
+        grid: 'rgba(75, 85, 99, 0.2)', 
+        hud: '#3b82f6',                
+        scanline: 'rgba(0, 0, 0, 0.1)' 
+    }
 };
 
-// Referencias UI
+// --- GESTOR DE ASSETS ---
+const SPRITES = {
+    aliado: new Image(),
+    enemigo: new Image(),
+    curandero: new Image(),
+    obstaculo: new Image()
+};
+
+SPRITES.aliado.src = 'assets/aliado.png';     
+SPRITES.enemigo.src = 'assets/enemigo.png';   
+SPRITES.curandero.src = 'assets/medico.png'; 
+SPRITES.obstaculo.src = 'assets/obstaculo.png'; 
+
+let assetsLoaded = 0;
+const totalAssets = Object.keys(SPRITES).length;
+
 const UI = {
     canvas: document.getElementById('gameCanvas'),
     ctx: document.getElementById('gameCanvas').getContext('2d'),
@@ -24,7 +49,8 @@ const UI = {
         msg: document.getElementById('game-msg'),
         barAliados: document.getElementById('bar-aliados'),
         barEnemigos: document.getElementById('bar-enemigos'),
-        header: document.querySelector('.top-bar') 
+        header: document.querySelector('.top-bar'),
+        btnStart: document.getElementById('btn-start') 
     },
     screens: {
         landing: document.getElementById('landing-section'),
@@ -32,415 +58,294 @@ const UI = {
     }
 };
 
-// --- ESTRUCTURAS DE DATOS ---
-// Equivalente a String[][] mapa, pero guardando referencias a objetos
+UI.elements.btnStart.disabled = true;
+UI.elements.btnStart.innerText = "CARGANDO ASSETS...";
+
+function checkAssetsLoaded() {
+    assetsLoaded++;
+    if (assetsLoaded === totalAssets) {
+        UI.elements.btnStart.disabled = false;
+        UI.elements.btnStart.innerHTML = 'EJECUTAR SIMULACIÓN <span class="btn-glare"></span>';
+    }
+}
+
+Object.values(SPRITES).forEach(img => {
+    img.onload = checkAssetsLoaded;
+    img.onerror = () => { console.warn("Fallo asset: " + img.src); checkAssetsLoaded(); };
+});
+
+// --- ESTRUCTURAS ---
 let grid = []; 
-let listas = {
-    obstaculos: [],
-    enemigos: [],
-    aliados: [],
-    curanderos: []
-};
-let gameState = {
-    running: false,
-    paused: false,
-    lastTime: 0,
-    animFrame: null
-};
+let listas = { obstaculos: [], enemigos: [], aliados: [], curanderos: [] };
+let gameState = { running: false, paused: false, lastTime: 0, animFrame: null };
 
-// --- CLASES (EQUIVALENTES A TUS ARCHIVOS .JAVA) ---
+// --- AJUSTE AUTOMÁTICO DE RESOLUCIÓN ---
+// Esto asegura que el canvas tenga el tamaño exacto del grid configurado
+function ajustarResolucionCanvas() {
+    UI.canvas.width = GAME_CONFIG.ANCHO * GAME_CONFIG.CELL_SIZE;
+    UI.canvas.height = GAME_CONFIG.ALTO * GAME_CONFIG.CELL_SIZE;
+}
 
-// [Entidad.java]
+// --- CLASES ---
 class Entidad {
     constructor(x, y) {
-        this.posX = x;
-        this.posY = y;
-        this.vida = 100;
+        this.posX = x; this.posY = y; this.vida = 100; this.angle = 0; 
     }
-
     getPosX() { return this.posX; }
     getPosY() { return this.posY; }
     setPosX(x) { this.posX = x; }
     setPosY(y) { this.posY = y; }
-    
     getVida() { return this.vida; }
-    
-    setVida(vida) {
-        if (vida < 0) this.vida = 0;
-        else if (vida > 100) this.vida = 100;
-        else this.vida = vida;
-    }
+    setVida(vida) { this.vida = (vida < 0) ? 0 : (vida > 100) ? 100 : vida; }
+    modificarVida(cantidad) { this.setVida(this.vida + cantidad); }
 
-    modificarVida(cantidad) {
-        this.setVida(this.vida + cantidad);
-    }
-
-    // Fórmula exacta: sqrt((x2-x1)² + (y2-y1)²)
     getDistancia(otraEntidad) {
         let dx = this.posX - otraEntidad.getPosX();
         let dy = this.posY - otraEntidad.getPosY();
         return Math.sqrt(dx * dx + dy * dy);
     }
+    actualizarRotacion(dx, dy) {
+        if (dx !== 0 || dy !== 0) this.angle = Math.atan2(dy, dx) + (Math.PI / 2);
+    }
 }
 
-// [Obstaculo.java]
-class Obstaculo extends Entidad {
-    constructor(x, y) { super(x, y); }
-}
-
-// [Aliado.java]
+class Obstaculo extends Entidad { constructor(x, y) { super(x, y); } }
 class Aliado extends Entidad {
     constructor(x, y) { super(x, y); }
-
-    // Implementación exacta de Aliado.java -> Escapa
-    Escapa(listaEnemigos, ALTO, ANCHO, listaAliados, listaObstaculos, listaCuranderos) {
-        let enemigo = null;
-        let distanciaMinima = Number.MAX_VALUE;
-
-        // 1. Encontrar enemigo más cercano
-        for (let e of listaEnemigos) {
+    Escapa(lE, ALTO, ANCHO, lA, lO, lC) {
+        let enemigo = null; let dMin = Number.MAX_VALUE;
+        for (let e of lE) {
             let d = this.getDistancia(e);
-            if (d < distanciaMinima) {
-                distanciaMinima = d;
-                enemigo = e;
-            }
+            if (d < dMin) { dMin = d; enemigo = e; }
         }
-
-        // 2. Solo huye si distanciaMinima > 3 no se cumple (es decir, <= 3) o enemigo es null
-        // OJO: Tu código Java dice: if (distanciaMinima > 3 || enemigo == null) return;
-        if (distanciaMinima > 3 || enemigo === null) return;
-
-        let menorDistancia = 0; // Buscamos ALEJARNOS, así que buscaremos el valor más alto posible comparado con 0
-
-        let mejorVx = 0;
-        let mejorVy = 0;
-
-        // Arrays estáticos de direcciones (Copiados de Java)
-        const DIRECCION_Y = [-1, -1, -1, 0, 0, 1, 1, 1];
-        const DIRECCION_X = [-1, 0, 1, -1, 1, -1, 0, 1];
-
+        if (dMin > 3 || enemigo === null) return;
+        let bestD = 0; let bx = 0; let by = 0;
+        const DY = [-1, -1, -1, 0, 0, 1, 1, 1];
+        const DX = [-1, 0, 1, -1, 1, -1, 0, 1];
         for (let i = 0; i < 8; i++) {
-            let nuevaX = this.getPosX() + DIRECCION_X[i];
-            let nuevaY = this.getPosY() + DIRECCION_Y[i];
-
-            if (MisFunciones.posicionValida(nuevaX, nuevaY, ALTO, ANCHO, listaAliados, listaEnemigos, listaObstaculos, listaCuranderos)) {
-                // Posición temporal simulada
-                let posicionPrueba = new Entidad(nuevaX, nuevaY);
-                let distancia = posicionPrueba.getDistancia(enemigo);
-
-                if (distancia > menorDistancia) {
-                    menorDistancia = distancia;
-                    mejorVx = DIRECCION_X[i];
-                    mejorVy = DIRECCION_Y[i];
-                }
+            let nx = this.posX + DX[i]; let ny = this.posY + DY[i];
+            if (MisFunciones.posicionValida(nx, ny, ALTO, ANCHO)) {
+                let temp = new Entidad(nx, ny);
+                let dist = temp.getDistancia(enemigo);
+                if (dist > bestD) { bestD = dist; bx = DX[i]; by = DY[i]; }
             }
         }
-
-        if (mejorVx !== 0 || mejorVy !== 0) {
-            // Actualizar Grid (necesario para JS visual)
+        if (bx !== 0 || by !== 0) {
             grid[this.posY][this.posX] = null; 
-            this.setPosX(this.getPosX() + mejorVx);
-            this.setPosY(this.getPosY() + mejorVy);
+            this.posX += bx; this.posY += by;
+            this.actualizarRotacion(bx, by);
             grid[this.posY][this.posX] = this;
         }
     }
 }
 
-// [Enemigo.java]
 class Enemigo extends Entidad {
     constructor(x, y) { super(x, y); }
-
-    // Implementación exacta de Enemigo.java -> Persigue
-    Persigue(listaAliados, ALTO, ANCHO, listaEnemigos, listaObstaculos, listaCuranderos) {
-        let objetivo = null;
-        let distanciaMinima = Number.MAX_VALUE;
-
-        for (let a of listaAliados) {
+    Persigue(lA, ALTO, ANCHO, lE, lO, lC) {
+        let obj = null; let dMin = Number.MAX_VALUE;
+        for (let a of lA) {
             let d = this.getDistancia(a);
-            if (d < distanciaMinima) {
-                distanciaMinima = d;
-                objetivo = a;
-            }
+            if (d < dMin) { dMin = d; obj = a; }
         }
-
-        if (objetivo === null) return;
-
-        let mayorDistancia = Number.MAX_VALUE; // Buscamos MINIMIZAR la distancia
-        let mejorVx = 0;
-        let mejorVy = 0;
-
-        const DIRECCION_Y = [-1, -1, -1, 0, 0, 1, 1, 1];
-        const DIRECCION_X = [-1, 0, 1, -1, 1, -1, 0, 1];
-
+        if (obj === null) return;
+        let bestD = Number.MAX_VALUE; let bx = 0; let by = 0;
+        const DY = [-1, -1, -1, 0, 0, 1, 1, 1];
+        const DX = [-1, 0, 1, -1, 1, -1, 0, 1];
         for (let i = 0; i < 8; i++) {
-            let nuevaX = this.getPosX() + DIRECCION_X[i];
-            let nuevaY = this.getPosY() + DIRECCION_Y[i];
-
-            if (MisFunciones.posicionValida(nuevaX, nuevaY, ALTO, ANCHO, listaAliados, listaEnemigos, listaObstaculos, listaCuranderos)) {
-                let posicionPrueba = new Entidad(nuevaX, nuevaY);
-                let distancia = posicionPrueba.getDistancia(objetivo);
-
-                if (distancia < mayorDistancia) {
-                    mayorDistancia = distancia;
-                    mejorVx = DIRECCION_X[i];
-                    mejorVy = DIRECCION_Y[i];
-                }
+            let nx = this.posX + DX[i]; let ny = this.posY + DY[i];
+            if (MisFunciones.posicionValida(nx, ny, ALTO, ANCHO)) {
+                let temp = new Entidad(nx, ny);
+                let dist = temp.getDistancia(obj);
+                if (dist < bestD) { bestD = dist; bx = DX[i]; by = DY[i]; }
             }
         }
-
-        if (mejorVx !== 0 || mejorVy !== 0) {
+        if (bx !== 0 || by !== 0) {
             grid[this.posY][this.posX] = null;
-            this.setPosX(this.getPosX() + mejorVx);
-            this.setPosY(this.getPosY() + mejorVy);
+            this.posX += bx; this.posY += by;
+            this.actualizarRotacion(bx, by);
             grid[this.posY][this.posX] = this;
         }
     }
 }
 
-// [Curandero.java]
 class Curandero extends Entidad {
     constructor(x, y) { super(x, y); }
-
-    // Implementación exacta de Curandero.java -> Cura
-    Cura(listaAliados, ALTO, ANCHO, listaEnemigos, listaObstaculos, listaCuranderos) {
-        let aliadoMasHerido = null;
-        let menorVida = Number.MAX_VALUE; // Integer.MAX_VALUE
-        let distanciaAliadoMasHerido = Number.MAX_VALUE;
-
-        for (let aliado of listaAliados) {
-            let distancia = this.getDistancia(aliado);
-            
-            // "Si está dentro del rango (10) y tiene menos vida que los anteriores"
-            // Nota: En Java usas (aliado.getVida() < menorVida). Es estricto.
-            if (distancia <= 10 && aliado.getVida() < menorVida) {
-                menorVida = aliado.getVida();
-                aliadoMasHerido = aliado;
-                distanciaAliadoMasHerido = distancia;
-            }
+    Cura(lA, ALTO, ANCHO, lE, lO, lC) {
+        let herido = null; let minVid = Number.MAX_VALUE; let dHerido = Number.MAX_VALUE;
+        for (let a of lA) {
+            let d = this.getDistancia(a);
+            if (d <= 10 && a.getVida() < minVid) { minVid = a.getVida(); herido = a; dHerido = d; }
         }
-
-        if (aliadoMasHerido === null) return;
-
-        // "Si el aliado está lo suficientemente cerca (<= 1), curarlo"
-        // IMPORTANTE: Distancia euclidiana diagonal (1,1) es 1.41. 
-        // 1.41 <= 1 es FALSO. Los curanderos en tu código Java NO curan en diagonal.
-        if (distanciaAliadoMasHerido <= 1) {
-            aliadoMasHerido.modificarVida(50);
-            return; // Priorizar curación sobre movimiento
-        }
-
-        // Movimiento hacia el herido
-        let mayorDistancia = Number.MAX_VALUE;
-        let mejorVx = 0;
-        let mejorVy = 0;
-
-        const DIRECCION_Y = [-1, -1, -1, 0, 0, 1, 1, 1];
-        const DIRECCION_X = [-1, 0, 1, -1, 1, -1, 0, 1];
-
+        if (herido === null) return;
+        if (dHerido <= 1) { herido.modificarVida(50); return; }
+        let bestD = Number.MAX_VALUE; let bx = 0; let by = 0;
+        const DY = [-1, -1, -1, 0, 0, 1, 1, 1];
+        const DX = [-1, 0, 1, -1, 1, -1, 0, 1];
         for (let i = 0; i < 8; i++) {
-            let nuevaX = this.getPosX() + DIRECCION_X[i];
-            let nuevaY = this.getPosY() + DIRECCION_Y[i];
-
-            if (MisFunciones.posicionValida(nuevaX, nuevaY, ALTO, ANCHO, listaAliados, listaEnemigos, listaObstaculos, listaCuranderos)) {
-                let posicionPrueba = new Entidad(nuevaX, nuevaY);
-                let distancia = posicionPrueba.getDistancia(aliadoMasHerido);
-
-                if (distancia < mayorDistancia) {
-                    mayorDistancia = distancia;
-                    mejorVx = DIRECCION_X[i];
-                    mejorVy = DIRECCION_Y[i];
-                }
+            let nx = this.posX + DX[i]; let ny = this.posY + DY[i];
+            if (MisFunciones.posicionValida(nx, ny, ALTO, ANCHO)) {
+                let temp = new Entidad(nx, ny);
+                let dist = temp.getDistancia(herido);
+                if (dist < bestD) { bestD = dist; bx = DX[i]; by = DY[i]; }
             }
         }
-
-        if (mejorVx !== 0 || mejorVy !== 0) {
+        if (bx !== 0 || by !== 0) {
             grid[this.posY][this.posX] = null;
-            this.setPosX(this.getPosX() + mejorVx);
-            this.setPosY(this.getPosY() + mejorVy);
+            this.posX += bx; this.posY += by;
+            this.actualizarRotacion(bx, by);
             grid[this.posY][this.posX] = this;
         }
     }
 }
 
-// [MisFunciones.java]
 const MisFunciones = {
-    
-    // Implementación usando el GRID para eficiencia, pero respetando la lógica de "casilla vacía"
-    posicionValida: (xDestino, yDestino, ALTO, ANCHO, lA, lE, lO, lC) => {
-        // Verificar límites
-        if ((xDestino < 0 || xDestino >= ANCHO) || (yDestino < 0 || yDestino >= ALTO)) {
-            return false;
-        }
-        
-        // En Java recorres las listas. Aquí, si el GRID está sincronizado, es equivalente 
-        // a verificar si grid[y][x] != null. Mantenemos el grid sincronizado siempre.
-        if (grid[yDestino][xDestino] !== null) {
-            return false;
-        }
-        
+    posicionValida: (x, y, ALTO, ANCHO) => {
+        if (x < 0 || x >= ANCHO || y < 0 || y >= ALTO) return false;
+        if (grid[y][x] !== null) return false;
         return true;
     },
-
-    detectarYResolverColisiones: (listaEnemigos, listaAliados) => {
-        let evento = "SISTEMA OK. SIN NOVEDADES.";
-        
-        // Doble bucle EXACTO al Java
-        for (let enemigo of listaEnemigos) {
-            for (let aliado of listaAliados) {
-                
-                let diferenciaX = Math.abs(enemigo.getPosX() - aliado.getPosX());
-                let diferenciaY = Math.abs(enemigo.getPosY() - aliado.getPosY());
-                
-                // Lógica de colisión EXACTA (Permite diagonales)
-                // (0,0) -> Misma casilla (imposible por posicionValida, pero el check está ahí)
-                // (0,1) o (1,0) -> Adyacente -> Suma 1 <= 2. TRUE
-                // (1,1) -> Diagonal -> Suma 2 <= 2. TRUE.
-                if ((diferenciaX === 0 && diferenciaY === 0) || 
-                    (diferenciaX <= 1 && diferenciaY <= 1 && (diferenciaX + diferenciaY) <= 2)) {
-                    
-                    enemigo.modificarVida(-25);
-                    aliado.modificarVida(-35); // Aliado recibe más daño (fiel al Java)
-                    evento = "¡Enfrentamiento! Se están matando...";
+    detectarYResolverColisiones: (lE, lA) => {
+        let msg = "SISTEMA OK. SIN NOVEDADES.";
+        for (let e of lE) {
+            for (let a of lA) {
+                let dx = Math.abs(e.posX - a.posX);
+                let dy = Math.abs(e.posY - a.posY);
+                if ((dx === 0 && dy === 0) || (dx <= 1 && dy <= 1 && (dx + dy) <= 2)) {
+                    e.modificarVida(-25); a.modificarVida(-35); 
+                    msg = "⚠️ CONTACTO HOSTIL :: DAÑO MASIVO";
                 }
             }
         }
-        return evento;
+        return msg;
     },
-
-    limpiarMuertos: (listaEnemigos, listaAliados) => {
-        // Limpiar enemigos
-        // En Java usas: for(int i=0... size) { remove(i); i--; }
-        // En JS iterar hacia atrás es la forma segura de hacer lo mismo sin saltar índices
-        for (let i = listaEnemigos.length - 1; i >= 0; i--) {
-            if (listaEnemigos[i].getVida() <= 0) {
-                // Limpiar referencia visual en grid
-                let e = listaEnemigos[i];
-                if (grid[e.posY][e.posX] === e) grid[e.posY][e.posX] = null;
-                listaEnemigos.splice(i, 1);
+    limpiarMuertos: (lE, lA) => {
+        for (let i = lE.length - 1; i >= 0; i--) {
+            if (lE[i].getVida() <= 0) {
+                if (grid[lE[i].posY][lE[i].posX] === lE[i]) grid[lE[i].posY][lE[i].posX] = null;
+                lE.splice(i, 1);
             }
         }
-
-        // Limpiar aliados
-        for (let i = listaAliados.length - 1; i >= 0; i--) {
-            if (listaAliados[i].getVida() <= 0) {
-                let a = listaAliados[i];
-                if (grid[a.posY][a.posX] === a) grid[a.posY][a.posX] = null;
-                listaAliados.splice(i, 1);
+        for (let i = lA.length - 1; i >= 0; i--) {
+            if (lA[i].getVida() <= 0) {
+                if (grid[lA[i].posY][lA[i].posX] === lA[i]) grid[lA[i].posY][lA[i].posX] = null;
+                lA.splice(i, 1);
             }
         }
     }
 };
 
-// --- RENDERIZADO VISUAL (CANVAS) ---
+// --- RENDERIZADO VISUAL ---
+function drawGrid(ctx) {
+    ctx.fillStyle = GAME_CONFIG.colors.grid; 
+    const halfCell = GAME_CONFIG.CELL_SIZE / 2;
+    for (let y = 0; y < GAME_CONFIG.ALTO; y++) {
+        for (let x = 0; x < GAME_CONFIG.ANCHO; x++) {
+            let cx = x * GAME_CONFIG.CELL_SIZE + halfCell;
+            let cy = y * GAME_CONFIG.CELL_SIZE + halfCell;
+            ctx.fillRect(cx - 1, cy - 1, 2, 2);
+        }
+    }
+}
+
+function drawHudOverlay(ctx, width, height) {
+    ctx.strokeStyle = GAME_CONFIG.colors.hud;
+    ctx.lineWidth = 3; // Línea más gruesa al hacer zoom
+    ctx.lineCap = 'square';
+    ctx.globalAlpha = 0.8; 
+
+    const margin = 2; const len = 50;   
+
+    ctx.beginPath();
+    ctx.moveTo(margin, margin + len); ctx.lineTo(margin, margin); ctx.lineTo(margin + len, margin);
+    ctx.moveTo(width - margin - len, margin); ctx.lineTo(width - margin, margin); ctx.lineTo(width - margin, margin + len);
+    ctx.moveTo(width - margin, height - margin - len); ctx.lineTo(width - margin, height - margin); ctx.lineTo(width - margin - len, height - margin);
+    ctx.moveTo(margin + len, height - margin); ctx.lineTo(margin, height - margin); ctx.lineTo(margin, height - margin - len);
+    ctx.stroke();
+    ctx.globalAlpha = 1.0; 
+}
+
 function redibujarMapa() {
-    // Limpiar canvas
     UI.ctx.clearRect(0, 0, UI.canvas.width, UI.canvas.height);
+    drawGrid(UI.ctx);
 
-    const dibujarEntidad = (entidad, color, tipo) => {
-        let x = entidad.getPosX() * GAME_CONFIG.CELL_SIZE;
-        let y = entidad.getPosY() * GAME_CONFIG.CELL_SIZE;
-        let vidaPct = entidad.getVida() / 100;
-
-        UI.ctx.fillStyle = color;
+    const dibujarSprite = (entidad, img, colorGlow, esEstatico) => {
+        let cx = entidad.posX * GAME_CONFIG.CELL_SIZE + (GAME_CONFIG.CELL_SIZE / 2);
+        let cy = entidad.posY * GAME_CONFIG.CELL_SIZE + (GAME_CONFIG.CELL_SIZE / 2);
+        let vidaPct = entidad.vida / 100;
         
-        // --- Aplicar Neon solo si está seleccionado ---
         if (GAME_CONFIG.quality === 'neon') {
-            UI.ctx.shadowBlur = 10; 
-            UI.ctx.shadowColor = color;
+            UI.ctx.shadowBlur = 15; UI.ctx.shadowColor = colorGlow;
         } else {
-            UI.ctx.shadowBlur = 0; // Flat mode
+            UI.ctx.shadowBlur = 0;
         }
 
-        if (tipo === 'obstaculo') {
-            UI.ctx.fillRect(x + 2, y + 2, 16, 16);
-        } else if (tipo === 'aliado') {
-            UI.ctx.globalAlpha = vidaPct < 0.3 ? 0.3 : vidaPct; // Feedback visual de daño
-            UI.ctx.beginPath();
-            UI.ctx.arc(x + 10, y + 10, 7, 0, Math.PI * 2);
-            UI.ctx.fill();
-        } else if (tipo === 'enemigo') {
-            UI.ctx.globalAlpha = vidaPct < 0.3 ? 0.3 : vidaPct;
-            // Dibujar X
-            UI.ctx.lineWidth = 3;
-            UI.ctx.strokeStyle = color;
-            UI.ctx.beginPath();
-            UI.ctx.moveTo(x + 4, y + 4);
-            UI.ctx.lineTo(x + 16, y + 16);
-            UI.ctx.moveTo(x + 16, y + 4);
-            UI.ctx.lineTo(x + 4, y + 16);
-            UI.ctx.stroke();
-        } else if (tipo === 'curandero') {
-            // Dibujar cruz +
-            UI.ctx.fillRect(x + 8, y + 3, 4, 14);
-            UI.ctx.fillRect(x + 3, y + 8, 14, 4);
-        }
+        UI.ctx.globalAlpha = vidaPct < 0.3 ? 0.5 : 1.0;
+        UI.ctx.save();
+        UI.ctx.translate(cx, cy);
+        if (!esEstatico) UI.ctx.rotate(entidad.angle);
 
+        // Ajuste tamaño sprite (dejamos 4px de margen en la celda de 40px)
+        let size = GAME_CONFIG.CELL_SIZE - 4; 
+        
+        if (img.complete && img.naturalHeight !== 0) {
+            UI.ctx.drawImage(img, -size/2, -size/2, size, size);
+        } else {
+            UI.ctx.fillStyle = colorGlow;
+            UI.ctx.fillRect(-size/2, -size/2, size, size);
+        }
+        UI.ctx.restore();
+
+        // Barra de vida más grande
+        if (vidaPct < 1.0 && !esEstatico) {
+            UI.ctx.shadowBlur = 0;
+            UI.ctx.fillStyle = "rgba(0,0,0,0.8)";
+            UI.ctx.fillRect(cx - 10, cy - 14, 20, 3);
+            UI.ctx.fillStyle = vidaPct < 0.4 ? "#ef4444" : "#10b981";
+            UI.ctx.fillRect(cx - 10, cy - 14, 20 * vidaPct, 3);
+        }
         UI.ctx.globalAlpha = 1.0;
         UI.ctx.shadowBlur = 0;
     };
 
-    listas.obstaculos.forEach(o => dibujarEntidad(o, '#f59e0b', 'obstaculo')); // Amarillo
-    listas.aliados.forEach(a => dibujarEntidad(a, '#10b981', 'aliado'));       // Verde
-    listas.enemigos.forEach(e => dibujarEntidad(e, '#ef4444', 'enemigo'));     // Rojo
-    listas.curanderos.forEach(c => dibujarEntidad(c, '#3b82f6', 'curandero')); // Azul
+    listas.obstaculos.forEach(o => dibujarSprite(o, SPRITES.obstaculo, '#f59e0b', true)); 
+    listas.curanderos.forEach(c => dibujarSprite(c, SPRITES.curandero, '#3b82f6', false)); 
+    listas.aliados.forEach(a => dibujarSprite(a, SPRITES.aliado, '#10b981', false));     
+    listas.enemigos.forEach(e => dibujarSprite(e, SPRITES.enemigo, '#ef4444', false));   
+    drawHudOverlay(UI.ctx, UI.canvas.width, UI.canvas.height);
 }
 
-// --- BUCLE PRINCIPAL (App.java MAIN LOOP) ---
+// --- BUCLE PRINCIPAL ---
 function gameLoop(timestamp) {
     if (!gameState.running) return;
-
     let elapsed = timestamp - gameState.lastTime;
-
     if (elapsed > GAME_CONFIG.renderSpeed) {
         if (!gameState.paused) {
+            for (let e of listas.enemigos) e.Persigue(listas.aliados, GAME_CONFIG.ALTO, GAME_CONFIG.ANCHO, listas.enemigos, listas.obstaculos, listas.curanderos);
+            for (let a of listas.aliados) a.Escapa(listas.enemigos, GAME_CONFIG.ALTO, GAME_CONFIG.ANCHO, listas.aliados, listas.obstaculos, listas.curanderos);
+            for (let c of listas.curanderos) c.Cura(listas.aliados, GAME_CONFIG.ALTO, GAME_CONFIG.ANCHO, listas.enemigos, listas.obstaculos, listas.curanderos);
             
-            // 1. Enemigos persiguen
-            for (let e of listas.enemigos) {
-                e.Persigue(listas.aliados, GAME_CONFIG.ALTO, GAME_CONFIG.ANCHO, listas.enemigos, listas.obstaculos, listas.curanderos);
-            }
-
-            // 2. Aliados escapan
-            for (let a of listas.aliados) {
-                a.Escapa(listas.enemigos, GAME_CONFIG.ALTO, GAME_CONFIG.ANCHO, listas.aliados, listas.obstaculos, listas.curanderos);
-            }
-
-            // 3. Curanderos curan
-            for (let c of listas.curanderos) {
-                c.Cura(listas.aliados, GAME_CONFIG.ALTO, GAME_CONFIG.ANCHO, listas.enemigos, listas.obstaculos, listas.curanderos);
-            }
-
-            // 4. Colisiones
             let evento = MisFunciones.detectarYResolverColisiones(listas.enemigos, listas.aliados);
             if(evento !== "SISTEMA OK. SIN NOVEDADES.") UI.elements.msg.innerText = evento;
-
-            // 5. Limpiar Muertos
+            
             MisFunciones.limpiarMuertos(listas.enemigos, listas.aliados);
-
-            // 6. Stats UI Update
             updateStats();
-
-            // 7. Condiciones de victoria
             checkWinCondition();
         }
-        
-        redibujarMapa();
+        redibujarMapa(); 
         gameState.lastTime = timestamp;
     }
-
     gameState.animFrame = requestAnimationFrame(gameLoop);
 }
 
 // --- SETUP & UTILS ---
-
 function spawnEntities(Clase, cantidad, listaDestino) {
     let count = 0;
     while (count < cantidad) {
         let x = Math.floor(Math.random() * GAME_CONFIG.ANCHO);
         let y = Math.floor(Math.random() * GAME_CONFIG.ALTO);
-        
-        // MisFunciones.casillaVacia check (usando grid)
         if (grid[y][x] === null) {
             let entidad = new Clase(x, y);
+            entidad.angle = Math.floor(Math.random() * 4) * (Math.PI / 2); 
             listaDestino.push(entidad);
             grid[y][x] = entidad;
             count++;
@@ -449,33 +354,37 @@ function spawnEntities(Clase, cantidad, listaDestino) {
 }
 
 function initGame() {
-    // Reset Grid
+    // 1. Ajustar tamaño físico del canvas antes de nada
+    ajustarResolucionCanvas();
+
     grid = Array(GAME_CONFIG.ALTO).fill().map(() => Array(GAME_CONFIG.ANCHO).fill(null));
     listas = { obstaculos: [], enemigos: [], aliados: [], curanderos: [] };
     
-    // Spawn exacto al Main de Java
-    spawnEntities(Obstaculo, 50, listas.obstaculos);
-    spawnEntities(Enemigo, 75, listas.enemigos);
-    spawnEntities(Aliado, 75, listas.aliados);
-    spawnEntities(Curandero, 5, listas.curanderos);
+    // --- REDUCCIÓN DE CANTIDADES ---
+    // Al tener menos casillas, bajamos el número de entidades para que no se atasquen
+    spawnEntities(Obstaculo, 30, listas.obstaculos); // Antes 50
+    spawnEntities(Enemigo, 30, listas.enemigos);     // Antes 75
+    spawnEntities(Aliado, 30, listas.aliados);       // Antes 75
+    spawnEntities(Curandero, 3, listas.curanderos);  // Antes 5
     
     UI.elements.msg.innerText = "SIMULACIÓN INICIADA.";
     gameState.running = true;
     gameState.paused = false;
     gameState.lastTime = 0;
     updateStats();
-    
+    redibujarMapa(); 
     requestAnimationFrame(gameLoop);
 }
 
 function updateStats() {
+    // Actualizamos las barras basándonos en el nuevo máximo (30 unidades)
     UI.elements.aliados.innerText = listas.aliados.length;
     UI.elements.enemigos.innerText = listas.enemigos.length;
     UI.elements.curanderos.innerText = listas.curanderos.length;
     UI.elements.obstaculos.innerText = listas.obstaculos.length;
     
-    let pctAliados = (listas.aliados.length / 75) * 100;
-    let pctEnemigos = (listas.enemigos.length / 75) * 100;
+    let pctAliados = (listas.aliados.length / 30) * 100;
+    let pctEnemigos = (listas.enemigos.length / 30) * 100;
     UI.elements.barAliados.style.width = `${pctAliados}%`;
     UI.elements.barEnemigos.style.width = `${pctEnemigos}%`;
 }
@@ -487,33 +396,26 @@ function checkWinCondition() {
         endGame("¡Ganan los enemigos!");
         UI.elements.msg.style.color = '#ef4444';
     } else if (listas.enemigos.length === 0) {
-        endGame("¡Ganan los aliados, a tope con la COPE!");
+        endGame("¡Ganan los aliados!");
         UI.elements.msg.style.color = '#10b981';
     }
 }
 
 function endGame(msg) {
-    gameState.running = false; // Detener loop lógico
-    gameState.paused = true;
+    gameState.running = false; gameState.paused = true;
     UI.elements.msg.innerText = msg;
     cancelAnimationFrame(gameState.animFrame);
-    redibujarMapa(); // Último frame estático
+    redibujarMapa(); 
 }
 
-// --- EVENT LISTENERS UI ---
-document.getElementById('btn-start').addEventListener('click', () => {
-    // Leer config de selectores
+// --- EVENT LISTENERS ---
+UI.elements.btnStart.addEventListener('click', () => {
     let speedVal = document.getElementById('sim-speed').value;
     GAME_CONFIG.renderSpeed = parseInt(speedVal);
-    
-    // Leer y guardar el modo de renderizado
     GAME_CONFIG.quality = document.getElementById('render-quality').value;
 
-    // Ocultar borde del header y mostrar botón Expandir
     UI.elements.header.classList.add('hide-border');
     UI.elements.header.classList.add('show-expand');
-
-    // Switch screens
     UI.screens.landing.classList.remove('active-section'); 
     UI.screens.landing.classList.add('hidden-section');
     setTimeout(() => { 
@@ -525,7 +427,7 @@ document.getElementById('btn-start').addEventListener('click', () => {
 
 document.getElementById('btn-pause').addEventListener('click', function() {
     gameState.paused = !gameState.paused;
-    this.innerText = gameState.paused ? "REANUDAR" : "PAUSAR";
+    this.innerText = gameState.paused ? "REANUDAR" : "PAUSA / REANUDAR";
 });
 
 document.getElementById('btn-reload').addEventListener('click', () => {
@@ -538,11 +440,8 @@ document.getElementById('btn-reload').addEventListener('click', () => {
 document.getElementById('btn-exit').addEventListener('click', () => {
     gameState.running = false;
     cancelAnimationFrame(gameState.animFrame);
-    
-    // Mostrar borde del header y ocultar botón Expandir
     UI.elements.header.classList.remove('hide-border');
     UI.elements.header.classList.remove('show-expand');
-
     UI.screens.game.classList.remove('active-section'); 
     UI.screens.game.classList.add('hidden-section');
     setTimeout(() => { 

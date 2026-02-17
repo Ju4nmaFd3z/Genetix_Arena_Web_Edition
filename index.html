@@ -32,7 +32,7 @@
                 <div class="brand-icon">🧬</div>
                 <div class="brand-text">
                     <h1>GENETIX <span class="dim">ARENA</span></h1>
-                    <span class="version-tag">SYSTEM V3.3</span>
+                    <span class="version-tag">SYSTEM V4.1</span>
                 </div>
             </div>
             
@@ -41,7 +41,6 @@
                     <span class="status-dot"></span>
                     <span class="status-text">ONLINE</span>
                 </div>
-                <!-- Este botón solo se mostrará en la pantalla del mapa mediante JS -->
                 <label for="view-toggle" class="btn-icon" title="Alternar Pantalla Completa">
                     <span class="icon-expand">⛶</span>
                     <span class="label-expand desktop-only">EXPANDIR</span>
@@ -79,21 +78,19 @@
                         <div class="info-item"><span>GRID</span><strong>75x25</strong></div>
                         <div class="info-item"><span>ENTIDADES</span><strong>205</strong></div>
                         <div class="info-item"><span>CORE</span><strong>JS ES6</strong></div>
-                        <div class="info-item"><span>DEV</span><strong>JUANMA</strong></div>
+                        <div class="info-item"><span>VISUAL</span><strong>CANVAS 2D</strong></div>
                     </div>
                 </div>
 
                 <div class="landing-footer">
-                    <button id="btn-start" class="btn-primary">
-                        EJECUTAR SIMULACIÓN
-                        <span class="btn-glare"></span>
+                    <!-- El texto cambia dinámicamente según la carga de assets -->
+                    <button id="btn-start" class="btn-primary" disabled>
+                        CARGANDO RECURSOS...
                     </button>
                     <div class="repo-links">
-                        <a href="https://github.com/Ju4nmaFd3z/Genetix_Arena.git" target="_blank">JAVA REPO</a>
+                        <a href="#" target="_blank">JAVA REPO</a>
                         <span>//</span>
-                        <a href="https://github.com/Ju4nmaFd3z/Genetix_Arena_Web_Edition.git" target="_blank">WEB REPO</a>
-                        <span>//</span>
-                        <a href="https://juanma-dev-portfolio.vercel.app/" target="_blank" class="highlight-link">PORTFOLIO</a>
+                        <a href="#" target="_blank">WEB REPO</a>
                     </div>
                 </div>
             </div>
@@ -118,12 +115,7 @@
                     </div>
 
                     <div class="canvas-wrapper">
-                        <!-- Esquinas Decorativas -->
-                        <div class="hud-corner top-left"></div>
-                        <div class="hud-corner top-right"></div>
-                        <div class="hud-corner bottom-left"></div>
-                        <div class="hud-corner bottom-right"></div>
-
+                        <!-- NOTA: Se han eliminado los divs hud-corner antiguos -->
                         <canvas id="gameCanvas" width="1500" height="500"></canvas>
                     </div>
 
@@ -182,7 +174,7 @@
                         </div>
                         
                         <div class="dev-sign">
-                            GENETIX WEB v3.3<br>Juanma Fdez
+                            GENETIX WEB v4.1<br>Juanma Fdez
                         </div>
                     </div>
 
