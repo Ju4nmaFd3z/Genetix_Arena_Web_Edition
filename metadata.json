@@ -1,0 +1,5 @@
+{
+  "name": "Genetix Arena V3.5",
+  "description": "Simulador táctico de combate autónomo con inteligencia artificial emergente. Migración de alta fidelidad (Java a TS) con interfaz React 19.",
+  "requestFramePermissions": []
+}

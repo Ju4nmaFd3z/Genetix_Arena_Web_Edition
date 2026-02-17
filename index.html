@@ -1,188 +1,87 @@
 <!DOCTYPE html>
-<html lang="es">
-
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Genetix Arena - Web Edition</title>
-    <link rel="icon" href="favicon.svg" type="image/svg+xml">
-    <link rel="stylesheet" href="css/style.css">
-    
-    <!-- Tipografías Técnicas -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genetix Arena V3.5</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        space: {
+                            black: '#050505',
+                            dark: '#0a0a0a',
+                            panel: '#111111',
+                            border: '#333333',
+                            text: '#e5e5e5',
+                            accent: '#ffffff',
+                            ally: '#10b981', // Emerald 500
+                            enemy: '#ef4444', // Red 500
+                            healer: '#3b82f6', // Blue 500
+                            obstacle: '#f59e0b', // Amber 500
+                        }
+                    },
+                    backgroundImage: {
+                        'grid-pattern': "linear-gradient(to right, #222 1px, transparent 1px), linear-gradient(to bottom, #222 1px, transparent 1px)"
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #050505;
+            color: #e5e5e5;
+            overflow-x: hidden;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0a0a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        .crt-flicker {
+            animation: flicker 0.15s infinite;
+        }
+        @keyframes flicker {
+            0% { opacity: 0.97; }
+            50% { opacity: 1; }
+            100% { opacity: 0.98; }
+        }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.574.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
 </head>
-
 <body>
-
-    <!-- CAPAS DE FONDO -->
-    <div class="bg-noise"></div>
-    <div class="bg-grid-perspective"></div>
-    <div class="vignette"></div>
-
-    <!-- CONTROLADOR MODO CINE (Checkbox Oculto) -->
-    <input type="checkbox" id="view-toggle" class="view-toggle-checkbox" hidden>
-
-    <main class="app-shell">
-        
-        <!-- BARRA SUPERIOR -->
-        <header class="top-bar">
-            <div class="brand">
-                <div class="brand-icon">🧬</div>
-                <div class="brand-text">
-                    <h1>GENETIX <span class="dim">ARENA</span></h1>
-                    <span class="version-tag">SYSTEM V4.1</span>
-                </div>
-            </div>
-            
-            <div class="header-controls">
-                <div class="system-status">
-                    <span class="status-dot"></span>
-                    <span class="status-text">ONLINE</span>
-                </div>
-                <label for="view-toggle" class="btn-icon" title="Alternar Pantalla Completa">
-                    <span class="icon-expand">⛶</span>
-                    <span class="label-expand desktop-only">EXPANDIR</span>
-                </label>
-            </div>
-        </header>
-
-        <!-- SECCIÓN 1: CONFIGURACIÓN (LANDING) -->
-        <section id="landing-section" class="active-section view-landing">
-            <div class="landing-card">
-                <div class="card-header">
-                    <h2>INICIALIZACIÓN DE PROTOCOLO</h2>
-                    <div class="deco-line"></div>
-                </div>
-
-                <div class="landing-body">
-                    <div class="config-row">
-                        <label>VELOCIDAD DE PROCESAMIENTO</label>
-                        <select id="sim-speed">
-                            <option value="400">TÁCTICO [400ms]</option>
-                            <option value="200" selected>NORMAL [200ms]</option>
-                            <option value="50">TURBO [50ms]</option>
-                        </select>
-                    </div>
-
-                    <div class="config-row">
-                        <label>MOTOR DE RENDERIZADO</label>
-                        <select id="render-quality">
-                            <option value="neon">NEON GLOW (RECOMENDADO)</option>
-                            <option value="flat">LOW LATENCY (FLAT)</option>
-                        </select>
-                    </div>
-
-                    <div class="info-grid">
-                        <div class="info-item"><span>GRID</span><strong>75x25</strong></div>
-                        <div class="info-item"><span>ENTIDADES</span><strong>205</strong></div>
-                        <div class="info-item"><span>CORE</span><strong>JS ES6</strong></div>
-                        <div class="info-item"><span>VISUAL</span><strong>CANVAS 2D</strong></div>
-                    </div>
-                </div>
-
-                <div class="landing-footer">
-                    <!-- El texto cambia dinámicamente según la carga de assets -->
-                    <button id="btn-start" class="btn-primary" disabled>
-                        CARGANDO RECURSOS...
-                    </button>
-                    <div class="repo-links">
-                        <a href="#" target="_blank">JAVA REPO</a>
-                        <span>//</span>
-                        <a href="#" target="_blank">WEB REPO</a>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- SECCIÓN 2: INTERFAZ DE JUEGO -->
-        <section id="game-section" class="hidden-section view-game">
-            
-            <div class="tactical-grid">
-                
-                <!-- COLUMNA IZQUIERDA: MAPA -->
-                <div class="viewport-area panel-frame">
-                    
-                    <div class="viewport-header">
-                        <div class="header-left">
-                            <span class="title">VISTA TÁCTICA</span>
-                            <span class="coords">SEC: 04-ALPHA</span>
-                        </div>
-                        <div class="live-indicator">
-                            <span class="blink-dot"></span> TRANSMISIÓN EN VIVO
-                        </div>
-                    </div>
-
-                    <div class="canvas-wrapper">
-                        <!-- NOTA: Se han eliminado los divs hud-corner antiguos -->
-                        <canvas id="gameCanvas" width="1500" height="500"></canvas>
-                    </div>
-
-                    <div class="console-output">
-                        <span class="prompt">>_</span>
-                        <span id="game-msg">SISTEMA EN ESPERA...</span>
-                    </div>
-                </div>
-
-                <!-- COLUMNA DERECHA: DATOS -->
-                <aside class="sidebar-area">
-                    
-                    <!-- Panel Estadísticas -->
-                    <div class="panel-frame stats-container">
-                        <div class="panel-header-sm">TELEMETRÍA</div>
-                        
-                        <div class="stat-compact-row">
-                            <div class="stat-text">
-                                <span class="label">FUERZAS ALIADAS</span>
-                                <span id="count-aliados" class="value text-green">0</span>
-                            </div>
-                            <div class="progress-bg">
-                                <div id="bar-aliados" class="progress-bar bg-green"></div>
-                            </div>
-                        </div>
-
-                        <div class="stat-compact-row">
-                            <div class="stat-text">
-                                <span class="label">AMENAZAS HOSTILES</span>
-                                <span id="count-enemigos" class="value text-red">0</span>
-                            </div>
-                            <div class="progress-bg">
-                                <div id="bar-enemigos" class="progress-bar bg-red"></div>
-                            </div>
-                        </div>
-
-                        <div class="mini-stats-row">
-                            <div class="mini-stat-box">
-                                <span class="value text-blue" id="count-curanderos">0</span>
-                                <span class="label">MÉDICOS</span>
-                            </div>
-                            <div class="mini-stat-box border-left">
-                                <span class="value text-yellow" id="count-obstaculos">0</span>
-                                <span class="label">OBSTÁCULOS</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Panel Controles -->
-                    <div class="panel-frame controls-container">
-                        <div class="panel-header-sm">COMANDOS</div>
-                        <div class="btn-stack">
-                            <button id="btn-pause" class="btn-tactical">PAUSA / REANUDAR</button>
-                            <button id="btn-reload" class="btn-tactical">REINICIAR GRID</button>
-                            <button id="btn-exit" class="btn-tactical btn-terminate">ABORTAR MISION</button>
-                        </div>
-                        
-                        <div class="dev-sign">
-                            GENETIX WEB v4.1<br>Juanma Fdez
-                        </div>
-                    </div>
-
-                </aside>
-            </div>
-        </section>
-
-    </main>
-    <script src="js/app.js"></script>
+    <div id="root"></div>
+<script type="module" src="/index.tsx"></script>
 </body>
 </html>
