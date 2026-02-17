@@ -1,51 +1,34 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
-  <defs>
-    <filter id="ultra-glow-bw">
-      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-      <feMerge>
-        <feMergeNode in="coloredBlur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-  </defs>
-  
-  <!-- Fondo circular oscuro -->
-  <circle cx="64" cy="64" r="64" fill="#050505"/>
-  
-  <!-- CRUZ BLANCA DE FONDO -->
-  <!-- Línea vertical blanca - toca el círculo en top y bottom -->
-  <line x1="64" y1="0" x2="64" y2="128" stroke="#ffffff" stroke-width="2" opacity="0.35"/>
-  
-  <!-- Línea horizontal blanca - toca el círculo en left y right -->
-  <line x1="0" y1="64" x2="128" y2="64" stroke="#ffffff" stroke-width="2" opacity="0.35"/>
-  
-  <!-- Anillo exterior APENAS visible -->
-  <circle cx="64" cy="64" r="58" fill="none" stroke="#ffffff" stroke-width="0.8" opacity="0.15"/>
-  
-  <!-- 4 PUNTOS ENORMES Y BRILLANTES (cardinales) - TODOS BLANCOS -->
-  <!-- Arriba (blanco) -->
-  <circle cx="64" cy="24" r="6.5" fill="#ffffff" opacity="1" filter="url(#ultra-glow-bw)"/>
-  
-  <!-- Derecha (blanco) -->
-  <circle cx="104" cy="64" r="6.5" fill="#ffffff" opacity="1" filter="url(#ultra-glow-bw)"/>
-  
-  <!-- Abajo (blanco) -->
-  <circle cx="64" cy="104" r="6.5" fill="#ffffff" opacity="1" filter="url(#ultra-glow-bw)"/>
-  
-  <!-- Izquierda (blanco) -->
-  <circle cx="24" cy="64" r="6.5" fill="#ffffff" opacity="1" filter="url(#ultra-glow-bw)"/>
-  
-  <!-- CENTRO MASIVO Y DOMINANTE -->
-  <!-- Anillo 1 (más externo - blanco) -->
-  <circle cx="64" cy="64" r="16" fill="none" stroke="#ffffff" stroke-width="3" opacity="0.85" filter="url(#ultra-glow-bw)"/>
-  
-  <!-- Anillo 2 (intermedio - gris) -->
-  <circle cx="64" cy="64" r="10" fill="none" stroke="#888888" stroke-width="2" opacity="0.7"/>
-  
-  <!-- Núcleo central brillante (blanco) -->
-  <circle cx="64" cy="64" r="6" fill="#ffffff" opacity="1" filter="url(#ultra-glow-bw)"/>
-  
-  <!-- Punto central (negro) -->
-  <circle cx="64" cy="64" r="3" fill="#000000" opacity="1"/>
-  
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Background -->
+  <circle cx="50" cy="50" r="50" fill="#0A0A0A"/>
+
+  <!-- Outer Ring -->
+  <circle cx="50" cy="50" r="38"
+          stroke="#10B981"
+          stroke-width="4"
+          fill="none"/>
+
+  <!-- Crosshair -->
+  <line x1="50" y1="18" x2="50" y2="32"
+        stroke="#10B981"
+        stroke-width="4"
+        stroke-linecap="round"/>
+        
+  <line x1="50" y1="68" x2="50" y2="82"
+        stroke="#10B981"
+        stroke-width="4"
+        stroke-linecap="round"/>
+
+  <line x1="18" y1="50" x2="32" y2="50"
+        stroke="#10B981"
+        stroke-width="4"
+        stroke-linecap="round"/>
+
+  <line x1="68" y1="50" x2="82" y2="50"
+        stroke="#10B981"
+        stroke-width="4"
+        stroke-linecap="round"/>
+
+  <!-- Center Core -->
+  <circle cx="50" cy="50" r="6" fill="#10B981"/>
 </svg>

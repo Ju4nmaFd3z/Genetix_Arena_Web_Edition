@@ -4,7 +4,7 @@ import ControlPanel from './components/ControlPanel';
 import ConsoleLog from './components/ConsoleLog';
 import { GenetixEngine } from './services/GenetixEngine';
 import { GameConfig, GameStats, LogEntry } from './types';
-import { Heart, ShieldAlert, Cross, Box, Trophy, AlertTriangle, RefreshCw, Activity, CheckCircle2, XCircle } from 'lucide-react';
+import { Heart, ShieldAlert, Cross, Box, Trophy, AlertTriangle, RefreshCw, Activity, CheckCircle2, XCircle, Radiation, Target, Crosshair } from 'lucide-react';
 
 // Default Config
 const DEFAULT_CONFIG: GameConfig = {
@@ -30,6 +30,15 @@ const App: React.FC = () => {
     const [hasStarted, setHasStarted] = useState(false); // New state to track if game ever ran
     const [gameResult, setGameResult] = useState<string | null>(null);
     const [missionId, setMissionId] = useState<string>('00000');
+    
+    // Explosion & Nuke State
+    const [isExploding, setIsExploding] = useState(false);
+    const [hasNukeBeenUsed, setHasNukeBeenUsed] = useState(false);
+    const [targetCoordinates, setTargetCoordinates] = useState<{x: number, y: number}[]>([]);
+    
+    // Visual Fallback Tracking (Synced with engine ticks manually via loop or state)
+    // We use a simple boolean here for the overlay grain, the color tint is in canvas
+    const [showFalloutGrain, setShowFalloutGrain] = useState(false);
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const engineRef = useRef<GenetixEngine>(new GenetixEngine());
@@ -54,12 +63,19 @@ const App: React.FC = () => {
     const initializeSystem = useCallback((autoTrigger = false) => {
         engineRef.current.init(config);
         setStats(engineRef.current.getStats());
-        if (!autoTrigger) setLogs([]); // Clear logs only on full manual reset
-        setGameResult(null);
+        
+        if (!autoTrigger) {
+            setLogs([]); // Clear logs only on full manual reset
+            setGameResult(null); // Clear result only on manual reset
+        }
         
         // Important: We are ready, but NOT running yet
         setHasStarted(false); 
         setIsRunning(false);
+        setIsExploding(false);
+        setHasNukeBeenUsed(false);
+        setShowFalloutGrain(false);
+        setTargetCoordinates([]);
         
         if (autoTrigger) {
             addLog(`Reconfiguración detectada. ${config.entityCounts.allies} Aliados vs ${config.entityCounts.enemies} Hostiles.`, "system");
@@ -77,9 +93,79 @@ const App: React.FC = () => {
 
     // 2. Actually Start the Loop (Triggered by button)
     const runSimulation = () => {
+        setGameResult(null); // Ensure result is cleared when starting
         setHasStarted(true);
         setIsRunning(true);
         addLog(">>> PROTOCOLO DE COMBATE INICIADO <<<", "combat");
+    };
+
+    // Trigger Omega Protocol with Animation Sequence
+    const handleOmegaProtocol = () => {
+        if (isExploding || hasNukeBeenUsed) return;
+
+        // 1. Start Sequence: targeting and countdown (0s)
+        setIsRunning(false); 
+        setIsExploding(true);
+        setHasNukeBeenUsed(true);
+        // Ensure targets are clear at start
+        setTargetCoordinates([]);
+        
+        addLog("⚠ ALERTA: SECUENCIA OMEGA INICIADA.", "system");
+
+        // Sequence Countdown
+        setTimeout(() => addLog("⚠ T-MINUS 2...", "system"), 1000);
+        setTimeout(() => addLog("⚠ T-MINUS 1...", "system"), 2000);
+
+        // 3. The "Boom" moment (3.0 seconds later)
+        setTimeout(() => {
+            // EXECUTE PROTOCOL FIRST (Eliminates 80%)
+            const msgs = engineRef.current.executeOmegaProtocol();
+            
+            // CAPTURE REMAINING SURVIVORS for targeting
+            const survivors = engineRef.current.listas.enemigos.map(e => ({ x: e.posX, y: e.posY }));
+
+            // Visual Update immediately at the boom
+            const ctx = canvasRef.current?.getContext('2d');
+            if (ctx) engineRef.current.draw(ctx, config);
+            
+            setStats(engineRef.current.getStats());
+            setShowFalloutGrain(true);
+
+            // Log messages
+            if (Array.isArray(msgs)) {
+                setTimeout(() => { if (msgs[0]) addLog(msgs[0], "combat"); }, 2000);
+                setTimeout(() => { if (msgs[1]) addLog(msgs[1], "combat"); }, 4000);
+            }
+
+            // 3.5. SHOW TARGETS (Delayed slightly after the boom flash starts fading)
+            // T+5.0s (2s after boom)
+            setTimeout(() => {
+                setTargetCoordinates(survivors); // Show ALL remaining enemies
+            }, 2000);
+
+        }, 3000); 
+
+        // 4. Resume Game (Extended wait to allow reading logs)
+        // Resume at 9s (6s after explosion)
+        setTimeout(() => {
+            setIsExploding(false);
+            setTargetCoordinates([]); // Clear HUD
+            
+            // Check win condition immediately after dust settles
+            const result = engineRef.current.checkWin();
+            if (result) {
+                setGameResult(result);
+                setMissionId(Math.floor(Math.random() * 90000 + 10000).toString());
+                addLog(`SIMULACIÓN FINALIZADA POST-DETONACIÓN.`, 'system');
+            } else {
+                 setIsRunning(true); // Resume loop
+            }
+        }, 9000);
+
+        // 5. Cleanup Fallout Grain
+        setTimeout(() => {
+            setShowFalloutGrain(false);
+        }, 12000); 
     };
 
     // The Game Loop
@@ -153,6 +239,8 @@ const App: React.FC = () => {
     // Handle Reset (Go back to Ready state)
     const handleReset = () => {
         setIsRunning(false);
+        setIsExploding(false);
+        setShowFalloutGrain(false);
         setTimeout(() => {
             initializeSystem(false);
         }, 50);
@@ -232,7 +320,14 @@ const App: React.FC = () => {
                         {/* Decorative Grid Background */}
                         <div className="absolute inset-0 bg-grid-pattern bg-[length:40px_40px] opacity-10 pointer-events-none"></div>
                         
-                        <div className="relative border border-space-border shadow-2xl shadow-black bg-black w-full max-w-[95%] aspect-[3/1]">
+                        <div className={`
+                            relative border border-space-border shadow-2xl shadow-black bg-black w-full max-w-[95%] aspect-[3/1] 
+                            ${isExploding ? 'animate-omega-sequence' : 'animate-idle-drift'}
+                        `}>
+                            {/* Fallout Noise Grain (Controlled by React for fading) */}
+                            {/* The Orange Tint is handled by Canvas draw() method for better perf/blending */}
+                            <div className={`absolute inset-0 z-10 opacity-30 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] pointer-events-none transition-opacity duration-[8000ms] ease-out ${showFalloutGrain ? 'opacity-30' : 'opacity-0'}`}></div>
+
                             {/* Corner Accents */}
                             <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-space-ally"></div>
                             <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-space-ally"></div>
@@ -243,8 +338,97 @@ const App: React.FC = () => {
                                 ref={canvasRef} 
                                 width={1500} 
                                 height={500}
-                                className="w-full h-full object-contain block"
+                                className={`w-full h-full object-contain block transition-all duration-1000 ${showFalloutGrain ? 'sepia-[.2] contrast-110' : ''}`}
                             />
+
+                            {/* OMEGA PROTOCOL EXPLOSION OVERLAY */}
+                            {isExploding && (
+                                <div className="absolute inset-0 z-40 overflow-hidden pointer-events-none">
+                                    {/* 1. Pre-Nuke: Red Siren Tint (0-3s) */}
+                                    <div className="absolute inset-0 bg-red-600/20 animate-pulse mix-blend-overlay"></div>
+                                    
+                                    {/* 2. The Flash (3s-6s) */}
+                                    <div className="absolute inset-0 bg-white animate-nuke-flash mix-blend-hard-light"></div>
+                                    
+                                    {/* 3. Shockwave Ring (3s) */}
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="w-[50px] h-[50px] rounded-full border-[50px] border-white animate-shockwave opacity-80"></div>
+                                    </div>
+
+                                    {/* 4. POST-NUKE TARGETING HUD (Appears at T+5s) */}
+                                    {targetCoordinates.length > 0 && (
+                                        <div className="absolute inset-0 z-50 animate-hud-cycle text-green-500 font-mono">
+                                            {/* Green Night Vision Filter */}
+                                            <div className="absolute inset-0 bg-green-900/10 mix-blend-overlay pointer-events-none"></div>
+                                            
+                                            {/* Scanlines for HUD */}
+                                            <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(0,255,0,0.06),rgba(0,255,0,0.02),rgba(0,0,0,0.06))] bg-[length:100%_2px,3px_100%] pointer-events-none"></div>
+
+                                            {/* Reticles */}
+                                            {targetCoordinates.map((target, idx) => (
+                                                <div 
+                                                    key={idx}
+                                                    className="absolute w-12 h-12 flex items-center justify-center"
+                                                    style={{ 
+                                                        // IMPORTANT: Adjusted logic to point to CENTER of cell
+                                                        left: `${((target.x + 0.5) / 75) * 100}%`, 
+                                                        top: `${((target.y + 0.5) / 25) * 100}%`,
+                                                        transform: 'translate(-50%, -50%)',
+                                                    }}
+                                                >
+                                                    {/* Tactical Box Corners */}
+                                                    <div className="absolute inset-0 border border-green-500/50 opacity-0 animate-[ping_1.5s_ease-out_infinite]" style={{ animationDelay: `${idx * 0.1}s` }}></div>
+                                                    
+                                                    {/* Main Reticle */}
+                                                    <div className="absolute w-full h-full border-2 border-green-500/80 rounded-[2px] shadow-[0_0_10px_rgba(34,197,94,0.5)]">
+                                                         {/* Crosshair pips */}
+                                                         <div className="absolute top-1/2 left-0 w-1 h-[1px] bg-green-500"></div>
+                                                         <div className="absolute top-1/2 right-0 w-1 h-[1px] bg-green-500"></div>
+                                                         <div className="absolute top-0 left-1/2 w-[1px] h-1 bg-green-500"></div>
+                                                         <div className="absolute bottom-0 left-1/2 w-[1px] h-1 bg-green-500"></div>
+                                                    </div>
+
+                                                    {/* Tracking Data */}
+                                                    <div className="absolute -right-16 -top-2 flex flex-col items-start">
+                                                        <div className="bg-black/80 text-[6px] px-1 border-l border-green-500 text-green-400 leading-tight">
+                                                            TGT-{idx < 9 ? '0'+(idx+1) : idx+1}
+                                                        </div>
+                                                        <div className="text-[6px] text-green-600 leading-tight">
+                                                            x:{target.x} y:{target.y}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+
+                                            {/* Centered Locking Text - Military Style */}
+                                            <div className="absolute bottom-8 left-0 right-0 flex justify-center items-end">
+                                                <div className="bg-black/90 border border-green-500/50 text-green-500 px-8 py-2 font-mono flex flex-col items-center gap-1 shadow-[0_0_15px_rgba(34,197,94,0.2)]">
+                                                    <div className="flex items-center gap-3 text-sm font-bold tracking-[0.2em]">
+                                                        <Crosshair className="animate-spin-slow" size={16} />
+                                                        <span>TARGET ACQUISITION</span>
+                                                        <Crosshair className="animate-spin-slow" size={16} />
+                                                    </div>
+                                                    <div className="w-full h-[2px] bg-green-900 overflow-hidden">
+                                                        <div className="h-full bg-green-500 w-full animate-[loading_2s_ease-in-out_infinite]"></div>
+                                                    </div>
+                                                    <div className="text-[8px] text-green-600 tracking-widest uppercase">
+                                                        Scanning sector 7-G // Threat Level: CRITICAL
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {/* 5. Warning Text - Initial Phase */}
+                                    {targetCoordinates.length === 0 && (
+                                        <div className="absolute top-10 left-0 right-0 flex justify-center animate-text-lifecycle">
+                                            <div className="bg-red-600 text-black px-6 py-1 font-mono text-xl font-bold tracking-[0.5em] border-2 border-black shadow-[0_0_10px_rgba(220,38,38,0.8)] transform -skew-x-12">
+                                                PROTOCOLO OMEGA INICIADO
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         {/* Modal Result Overlay */}
@@ -281,7 +465,7 @@ const App: React.FC = () => {
                                         </p>
 
                                         {/* Stats Report Grid */}
-                                        <div className="grid grid-cols-2 gap-px bg-space-border w-full mb-8 border border-space-border">
+                                        <div className="grid grid-cols-2 gap-px bg-space-border w-full border border-space-border">
                                             <div className="bg-space-dark p-3">
                                                 <div className="text-[10px] text-gray-500 uppercase mb-1">Supervivientes</div>
                                                 <div className="text-xl font-mono text-space-ally">{stats.allies}</div>
@@ -291,19 +475,6 @@ const App: React.FC = () => {
                                                 <div className="text-xl font-mono text-space-enemy">{stats.enemies}</div>
                                             </div>
                                         </div>
-
-                                        <button 
-                                            onClick={handleReset}
-                                            className={`
-                                                group w-full bg-white text-black py-4 font-bold uppercase tracking-[0.15em] text-xs
-                                                hover:bg-gray-200 transition-all flex items-center justify-center gap-3 relative overflow-hidden
-                                            `}
-                                        >
-                                            <span className="relative z-10 flex items-center gap-2">
-                                                <RefreshCw size={16} className="group-hover:rotate-180 transition-transform duration-500" /> 
-                                                REINICIAR SISTEMA
-                                            </span>
-                                        </button>
                                     </div>
 
                                     {/* Scanline */}
@@ -361,12 +532,18 @@ const App: React.FC = () => {
                             config={config} 
                             isRunning={isRunning} 
                             hasStarted={hasStarted}
+                            isGameOver={!!gameResult}
                             setConfig={setConfig} 
                             onTogglePause={() => setIsRunning(!isRunning)}
                             onReset={handleReset}
                             onStart={runSimulation}
                             onSetDefaults={() => setConfig(DEFAULT_CONFIG)}
                             onAbort={() => switchView('landing', () => setIsRunning(false))}
+                            // New Props for Omega Protocol
+                            isEmergencyAvailable={stats.allies === 1 && stats.enemies > 0}
+                            isExploding={isExploding}
+                            hasNukeBeenUsed={hasNukeBeenUsed}
+                            onTriggerEmergency={handleOmegaProtocol}
                         />
                     </div>
                 </aside>
@@ -383,6 +560,123 @@ const App: React.FC = () => {
                 @keyframes scan {
                     0% { transform: translateY(-100%); }
                     100% { transform: translateY(1000%); }
+                }
+
+                @keyframes loading {
+                    0% { transform: translateX(-100%); }
+                    50% { transform: translateX(0); }
+                    100% { transform: translateX(100%); }
+                }
+                
+                @keyframes nuke-flash {
+                    0% { opacity: 0; background-color: #fff; }
+                    20% { opacity: 1; background-color: #fff; }
+                    100% { opacity: 0; }
+                }
+
+                @keyframes shockwave {
+                    0% { transform: scale(0); opacity: 1; border-width: 100px; }
+                    100% { transform: scale(4); opacity: 0; border-width: 0px; }
+                }
+
+                @keyframes omega-sequence {
+                    /* CHARGING (0s - 3s) */
+                    0% { transform: translate(0, 0); }
+                    
+                    /* Low Rumble */
+                    5% { transform: translate(-1px, 1px); }
+                    10% { transform: translate(1px, -1px); }
+                    15% { transform: translate(-2px, 0); }
+                    20% { transform: translate(2px, 0); }
+                    25% { transform: translate(-1px, -1px); }
+                    30% { transform: translate(1px, 1px); }
+                    
+                    /* Medium Rumble */
+                    35% { transform: translate(-3px, 1px); }
+                    40% { transform: translate(3px, -1px); }
+                    45% { transform: translate(-3px, 0); }
+                    50% { transform: translate(3px, 0); }
+                    
+                    /* High Rumble (Pre-ignition) */
+                    55% { transform: translate(-5px, 2px); }
+                    60% { transform: translate(5px, -2px); }
+                    65% { transform: translate(-7px, 3px) rotate(-1deg); }
+                    68% { transform: translate(7px, -3px) rotate(1deg); }
+                    70% { transform: translate(-9px, 5px) rotate(-2deg) scale(0.98); } /* Compress */
+                    72% { transform: translate(9px, -5px) rotate(2deg) scale(0.95); } /* Compress more */
+                    74% { transform: translate(0, 0) scale(0.9); } /* Implode point */
+
+                    /* DETONATION (3s mark = 75%) */
+                    75% { transform: translate(-30px, 20px) rotate(-5deg) scale(1.1); }
+                    
+                    /* SHOCKWAVE */
+                    76% { transform: translate(25px, -25px) rotate(5deg) scale(1.15); }
+                    78% { transform: translate(-20px, 15px) rotate(-4deg) scale(1.1); }
+                    80% { transform: translate(15px, -10px) rotate(4deg) scale(1.05); }
+                    85% { transform: translate(-10px, 8px) rotate(-2deg) scale(1.02); }
+                    90% { transform: translate(5px, -5px) rotate(1deg); }
+                    95% { transform: translate(-2px, 2px); }
+                    100% { transform: translate(0, 0); }
+                }
+
+                .animate-omega-sequence {
+                    animation: omega-sequence 4s ease-in-out forwards;
+                }
+
+                @keyframes idle-drift {
+                    0%, 100% { transform: translate(0, 0); }
+                    25% { transform: translate(0.5px, 0.5px); }
+                    50% { transform: translate(-0.5px, 0.5px); }
+                    75% { transform: translate(0.5px, -0.5px); }
+                }
+                .animate-idle-drift {
+                    animation: idle-drift 3s ease-in-out infinite;
+                }
+
+                @keyframes fade-out-delayed {
+                    0% { opacity: 1; }
+                    80% { opacity: 1; }
+                    100% { opacity: 0; }
+                }
+
+                @keyframes text-lifecycle {
+                    0% { opacity: 0; transform: translateY(-20px); }
+                    10% { opacity: 1; transform: translateY(0); }
+                    80% { opacity: 1; }
+                    100% { opacity: 0; }
+                }
+
+                .animate-text-lifecycle {
+                    animation: text-lifecycle 3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                }
+
+                .animate-nuke-flash {
+                    animation: nuke-flash 3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+                    animation-delay: 3s;
+                }
+                
+                .animate-shockwave {
+                    animation: shockwave 2s ease-out forwards;
+                    animation-delay: 3s;
+                }
+                
+                .animate-spin-slow {
+                    animation: spin 10s linear infinite;
+                }
+                
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+
+                @keyframes hud-cycle {
+                    0% { opacity: 0; }
+                    10% { opacity: 1; }
+                    80% { opacity: 1; }
+                    100% { opacity: 0; }
+                }
+                .animate-hud-cycle {
+                    animation: hud-cycle 4s ease-in-out forwards;
                 }
             `}</style>
             {renderContent()}

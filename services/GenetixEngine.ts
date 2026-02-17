@@ -242,6 +242,10 @@ export class GenetixEngine {
     ANCHO = 75;
     ALTO = 25;
     CELL_SIZE = 20;
+    
+    // Radiation mechanics
+    falloutTicks = 0;
+    MAX_FALLOUT = 40; // approx 8-10 seconds at 200ms
 
     grid: (Entity | null)[][] = [];
     listas = {
@@ -263,6 +267,7 @@ export class GenetixEngine {
             aliados: [],
             curanderos: []
         };
+        this.falloutTicks = 0;
     }
 
     init(config: GameConfig) {
@@ -290,9 +295,70 @@ export class GenetixEngine {
         }
     }
 
+    // New Mechanic: Omega Protocol
+    executeOmegaProtocol(): string[] {
+        // 1. Heal all remaining allies
+        this.listas.aliados.forEach(a => a.setVida(100));
+
+        // 2. Destroy 80% of enemies
+        const totalEnemies = this.listas.enemigos.length;
+        const toDestroy = Math.floor(totalEnemies * 0.8);
+        
+        // Shuffle and slice to pick random victims
+        const shuffled = [...this.listas.enemigos].sort(() => 0.5 - Math.random());
+        const victims = shuffled.slice(0, toDestroy);
+
+        victims.forEach(v => {
+            v.setVida(0); // Mark for death
+        });
+
+        // Trigger Fallout
+        this.falloutTicks = this.MAX_FALLOUT;
+
+        // Clean up immediately
+        MisFunciones.limpiarMuertos(this.listas.enemigos, this.listas.aliados, this.grid);
+
+        return [
+            `PROTOCOLO OMEGA EJECUTADO. ${toDestroy} HOSTILES ELIMINADOS. PRECAUCIÓN: NIEBLA RADIACTIVA.`,
+            `PROTOCOLO OMEGA: NANOBOTS DE REPARACIÓN ACTIVADOS. INTEGRIDAD DE FLOTA ALIADA RESTAURADA AL 100%.`
+        ];
+    }
+
     update(): string | null {
+        let evento: string | null = null;
+
+        // Fallout Logic (Aggressive & Fast)
+        if (this.falloutTicks > 0) {
+            this.falloutTicks--;
+            
+            // 1. Enemy Damage (Severe Radiation Poisoning)
+            // 70% chance per tick to damage enemies
+            if (Math.random() > 0.3) {
+                this.listas.enemigos.forEach(e => {
+                     // Each enemy takes -5 HP
+                    if (Math.random() > 0.4) e.modificarVida(-5); 
+                });
+            }
+
+            // 2. Ally Damage (Residual Fallout - Friendly Fire)
+            // 30% chance per tick to damage allies (Lower than before)
+            if (Math.random() > 0.7) {
+                this.listas.aliados.forEach(a => {
+                    if (Math.random() > 0.7) a.modificarVida(-1); 
+                });
+            }
+
+            if (this.falloutTicks % 15 === 0) {
+                evento = "¡ALERTA! DAÑO ESTRUCTURAL POR RADIACIÓN.";
+            }
+        }
+
         // 1. Enemigos persiguen
         for (let e of this.listas.enemigos) {
+            // Radiation Slowdown: Enemies struggle to move in fog
+            // 60% chance to skip turn if fallout is active
+            if (this.falloutTicks > 0 && Math.random() < 0.6) continue;
+
             e.Persigue(this.listas.aliados, this.ALTO, this.ANCHO, this.grid);
         }
 
@@ -307,7 +373,8 @@ export class GenetixEngine {
         }
 
         // 4. Colisiones
-        let evento = MisFunciones.detectarYResolverColisiones(this.listas.enemigos, this.listas.aliados);
+        let eventoColision = MisFunciones.detectarYResolverColisiones(this.listas.enemigos, this.listas.aliados);
+        if (eventoColision) evento = eventoColision;
 
         // 5. Limpiar Muertos
         MisFunciones.limpiarMuertos(this.listas.enemigos, this.listas.aliados, this.grid);
@@ -318,6 +385,13 @@ export class GenetixEngine {
     draw(ctx: CanvasRenderingContext2D, config: GameConfig) {
         // Clear frame
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+        // Draw Radiation Fog (Background) if active
+        if (this.falloutTicks > 0) {
+            const opacity = (this.falloutTicks / this.MAX_FALLOUT) * 0.4; // Max 0.4 opacity
+            ctx.fillStyle = `rgba(255, 140, 0, ${opacity})`;
+            ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        }
 
         const drawEntity = (entidad: Entity, color: string, type: string) => {
             // Calculate center of the cell for geometric drawing
