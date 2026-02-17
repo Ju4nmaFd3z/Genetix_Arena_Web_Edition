@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
   <defs>
-    <filter id="ultra-glow">
+    <filter id="ultra-glow-bw">
       <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
       <feMerge>
         <feMergeNode in="coloredBlur"/>
@@ -12,40 +12,40 @@
   <!-- Fondo circular oscuro -->
   <circle cx="64" cy="64" r="64" fill="#050505"/>
   
-  <!-- CRUZ VERDE DE FONDO (primero para que esté atrás) -->
-  <!-- Línea vertical verde - toca el círculo en top y bottom -->
-  <line x1="64" y1="0" x2="64" y2="128" stroke="#10b981" stroke-width="2" opacity="0.35"/>
+  <!-- CRUZ BLANCA DE FONDO -->
+  <!-- Línea vertical blanca - toca el círculo en top y bottom -->
+  <line x1="64" y1="0" x2="64" y2="128" stroke="#ffffff" stroke-width="2" opacity="0.35"/>
   
-  <!-- Línea horizontal verde - toca el círculo en left y right -->
-  <line x1="0" y1="64" x2="128" y2="64" stroke="#10b981" stroke-width="2" opacity="0.35"/>
+  <!-- Línea horizontal blanca - toca el círculo en left y right -->
+  <line x1="0" y1="64" x2="128" y2="64" stroke="#ffffff" stroke-width="2" opacity="0.35"/>
   
   <!-- Anillo exterior APENAS visible -->
-  <circle cx="64" cy="64" r="58" fill="none" stroke="#10b981" stroke-width="0.8" opacity="0.15"/>
+  <circle cx="64" cy="64" r="58" fill="none" stroke="#ffffff" stroke-width="0.8" opacity="0.15"/>
   
-  <!-- 4 PUNTOS ENORMES Y BRILLANTES (cardinales) -->
-  <!-- Arriba (aliado - emerald) -->
-  <circle cx="64" cy="24" r="6.5" fill="#10b981" opacity="1" filter="url(#ultra-glow)"/>
+  <!-- 4 PUNTOS ENORMES Y BRILLANTES (cardinales) - TODOS BLANCOS -->
+  <!-- Arriba (blanco) -->
+  <circle cx="64" cy="24" r="6.5" fill="#ffffff" opacity="1" filter="url(#ultra-glow-bw)"/>
   
-  <!-- Derecha (enemigo - rojo) -->
-  <circle cx="104" cy="64" r="6.5" fill="#ef4444" opacity="1" filter="url(#ultra-glow)"/>
+  <!-- Derecha (blanco) -->
+  <circle cx="104" cy="64" r="6.5" fill="#ffffff" opacity="1" filter="url(#ultra-glow-bw)"/>
   
-  <!-- Abajo (enemigo - rojo) -->
-  <circle cx="64" cy="104" r="6.5" fill="#ef4444" opacity="1" filter="url(#ultra-glow)"/>
+  <!-- Abajo (blanco) -->
+  <circle cx="64" cy="104" r="6.5" fill="#ffffff" opacity="1" filter="url(#ultra-glow-bw)"/>
   
-  <!-- Izquierda (aliado - emerald) -->
-  <circle cx="24" cy="64" r="6.5" fill="#10b981" opacity="1" filter="url(#ultra-glow)"/>
+  <!-- Izquierda (blanco) -->
+  <circle cx="24" cy="64" r="6.5" fill="#ffffff" opacity="1" filter="url(#ultra-glow-bw)"/>
   
   <!-- CENTRO MASIVO Y DOMINANTE -->
-  <!-- Anillo 1 (más externo) -->
-  <circle cx="64" cy="64" r="16" fill="none" stroke="#06b6d4" stroke-width="3" opacity="0.85" filter="url(#ultra-glow)"/>
+  <!-- Anillo 1 (más externo - blanco) -->
+  <circle cx="64" cy="64" r="16" fill="none" stroke="#ffffff" stroke-width="3" opacity="0.85" filter="url(#ultra-glow-bw)"/>
   
-  <!-- Anillo 2 (intermedio) -->
-  <circle cx="64" cy="64" r="10" fill="none" stroke="#10b981" stroke-width="2" opacity="0.7"/>
+  <!-- Anillo 2 (intermedio - gris) -->
+  <circle cx="64" cy="64" r="10" fill="none" stroke="#888888" stroke-width="2" opacity="0.7"/>
   
-  <!-- Núcleo central brillante -->
-  <circle cx="64" cy="64" r="6" fill="#06b6d4" opacity="1" filter="url(#ultra-glow)"/>
+  <!-- Núcleo central brillante (blanco) -->
+  <circle cx="64" cy="64" r="6" fill="#ffffff" opacity="1" filter="url(#ultra-glow-bw)"/>
   
-  <!-- Punto central -->
-  <circle cx="64" cy="64" r="3" fill="#10b981" opacity="1"/>
+  <!-- Punto central (negro) -->
+  <circle cx="64" cy="64" r="3" fill="#000000" opacity="1"/>
   
 </svg>
