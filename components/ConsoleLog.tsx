@@ -23,10 +23,10 @@ const ConsoleLog: React.FC<ConsoleLogProps> = ({ logs }) => {
                 {logs.length === 0 && <span className="text-gray-600 italic">Sistema listo. Esperando entrada...</span>}
                 {logs.map((log) => (
                     <div key={log.id} className="flex gap-2">
-                        <span className="text-gray-500">[{log.timestamp}]</span>
+                        <span className="text-gray-600">[{log.timestamp}]</span>
                         <span className={`${
-                            log.type === 'combat' ? 'text-red-500' : 
-                            log.type === 'system' ? 'text-blue-500' : 'text-gray-300'
+                            log.type === 'combat' ? 'text-gray-400' : 
+                            log.type === 'system' ? 'text-white' : 'text-gray-300'
                         }`}>
                             {log.message}
                         </span>

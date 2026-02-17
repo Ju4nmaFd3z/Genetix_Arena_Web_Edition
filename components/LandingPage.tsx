@@ -233,7 +233,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
 
             <footer className="relative z-10 border-t border-space-border/30 p-8 md:px-16 flex flex-col md:flex-row justify-between items-center text-xs text-gray-500 font-mono">
                 <div className="text-center md:text-left mb-4 md:mb-0">
-                    <p>ESTADO DEL SISTEMA: NORMAL</p>
+                    <p>ESTADO DEL SISTEMA: PERITA</p>
                     <p>VERSIÓN 3.5 STABLE (2026)</p>
                 </div>
                 <div className="text-center md:text-right">

@@ -1,6 +1,6 @@
 import React from 'react';
 import { GameConfig } from '../types';
-import { Sliders, Activity, Eye, Play, Pause, RotateCcw, Power, Undo2 } from 'lucide-react';
+import { Sliders, Activity, Eye, Play, Pause, RotateCcw, Power, Undo2, LogOut } from 'lucide-react';
 
 interface ControlPanelProps {
     config: GameConfig;
@@ -11,9 +11,10 @@ interface ControlPanelProps {
     onReset: () => void;
     onStart: () => void;
     onSetDefaults: () => void;
+    onAbort: () => void;
 }
 
-const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStarted, setConfig, onTogglePause, onReset, onStart, onSetDefaults }) => {
+const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStarted, setConfig, onTogglePause, onReset, onStart, onSetDefaults, onAbort }) => {
     
     const handleEntityChange = (key: keyof typeof config.entityCounts, value: number) => {
         setConfig(prev => ({
@@ -27,6 +28,36 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStart
 
     return (
         <div className="bg-space-panel p-4 md:p-6 flex flex-col gap-6 font-mono text-sm h-full">
+            <style>{`
+                /* Custom Range Slider Styling */
+                input[type=range]::-webkit-slider-thumb {
+                    -webkit-appearance: none;
+                    height: 12px;
+                    width: 12px;
+                    border-radius: 50%;
+                    background: #ffffff;
+                    cursor: pointer;
+                    margin-top: -2px; /* Adjusted from -3px to -2px to lower it further */
+                    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+                    transition: transform 0.1s;
+                }
+                input[type=range]:active::-webkit-slider-thumb {
+                    transform: scale(1.2);
+                }
+                input[type=range]::-moz-range-thumb {
+                    height: 12px;
+                    width: 12px;
+                    border: none;
+                    border-radius: 50%;
+                    background: #ffffff;
+                    cursor: pointer;
+                    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+                    transition: transform 0.1s;
+                }
+                input[type=range]:active::-moz-range-thumb {
+                    transform: scale(1.2);
+                }
+            `}</style>
             
             {/* Main Controls - Logic: If not started, Show Start. If started, show Pause/Reset */}
             <div className="flex flex-col gap-2">
@@ -75,7 +106,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStart
                         { label: 'CURANDEROS', key: 'healers', color: 'text-space-healer' },
                         { label: 'OBSTÁCULOS', key: 'obstacles', color: 'text-space-obstacle' }
                     ].map((item) => (
-                        <div key={item.key} className="flex flex-col gap-1">
+                        <div key={item.key} className="flex flex-col gap-3">
                             <div className="flex justify-between items-center">
                                 <span className={`${item.color} font-bold text-xs`}>{item.label}</span>
                                 <span className="text-gray-400 text-xs">{config.entityCounts[item.key as keyof typeof config.entityCounts]}</span>
@@ -87,7 +118,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStart
                                 disabled={isRunning}
                                 value={config.entityCounts[item.key as keyof typeof config.entityCounts]} 
                                 onChange={(e) => handleEntityChange(item.key as keyof typeof config.entityCounts, parseInt(e.target.value))}
-                                className={`w-full h-1 rounded-lg appearance-none cursor-pointer accent-white ${isRunning ? 'bg-gray-800' : 'bg-space-border'}`}
+                                className={`w-full h-1 rounded-lg appearance-none cursor-pointer ${isRunning ? 'bg-gray-800' : 'bg-space-border'}`}
                             />
                         </div>
                     ))}
@@ -102,7 +133,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStart
                 </div>
                 
                 <div className="space-y-4">
-                     <div className="flex flex-col gap-1">
+                     <div className="flex flex-col gap-3">
                         <div className="flex justify-between items-center">
                             <span className="text-white text-xs">VELOCIDAD SIM</span>
                             <span className="text-gray-400 text-xs">{config.renderSpeed}ms</span>
@@ -114,7 +145,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStart
                             step="10"
                             value={config.renderSpeed} 
                             onChange={(e) => setConfig({...config, renderSpeed: parseInt(e.target.value)})}
-                            className="w-full h-1 bg-space-border rounded-lg appearance-none cursor-pointer accent-white"
+                            className="w-full h-1 bg-space-border rounded-lg appearance-none cursor-pointer"
                         />
                          <div className="flex justify-between text-[10px] text-gray-600">
                             <span>Rápido</span>
@@ -143,14 +174,21 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStart
                 </div>
             </div>
 
-            {/* Reset Defaults Button */}
-            <div className="mt-auto pt-4 border-t border-space-border">
+            {/* Bottom Actions: Defaults & Abort */}
+            <div className="mt-auto pt-4 border-t border-space-border flex flex-col gap-3">
                 <button
                     onClick={onSetDefaults}
                     disabled={isRunning}
                     className={`w-full flex items-center justify-center gap-2 p-3 text-xs uppercase tracking-widest font-bold border border-dashed border-space-border text-gray-500 hover:text-white hover:border-white transition-all ${isRunning ? 'opacity-30 cursor-not-allowed' : ''}`}
                 >
                     <Undo2 size={14} /> RESTABLECER VALORES
+                </button>
+
+                <button
+                    onClick={onAbort}
+                    className="w-full flex items-center justify-center gap-2 p-3 text-xs uppercase tracking-widest font-bold border border-red-900/30 text-red-900 hover:bg-red-900/10 hover:border-red-600 hover:text-red-500 transition-all"
+                >
+                    <LogOut size={14} /> ABORTAR MISIÓN
                 </button>
             </div>
 

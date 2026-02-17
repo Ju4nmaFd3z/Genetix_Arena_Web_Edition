@@ -316,57 +316,134 @@ export class GenetixEngine {
     }
 
     draw(ctx: CanvasRenderingContext2D, config: GameConfig) {
-        // Clear
+        // Clear frame
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-        // Grid Lines (Subtle)
-        ctx.strokeStyle = '#222';
-        ctx.lineWidth = 0.5;
-        // Optimization: Don't draw grid every frame if static background is used, but here we draw entities.
-
         const drawEntity = (entidad: Entity, color: string, type: string) => {
-            let x = entidad.getPosX() * this.CELL_SIZE;
-            let y = entidad.getPosY() * this.CELL_SIZE;
+            // Calculate center of the cell for geometric drawing
+            let cx = entidad.getPosX() * this.CELL_SIZE + (this.CELL_SIZE / 2);
+            let cy = entidad.getPosY() * this.CELL_SIZE + (this.CELL_SIZE / 2);
             
-            ctx.fillStyle = color;
             ctx.shadowBlur = 0;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
 
             if (type === 'obstaculo') {
-                ctx.fillStyle = '#f59e0b'; // Amber
-                ctx.fillRect(x + 2, y + 2, 16, 16);
-            } else if (type === 'aliado') {
-                ctx.fillStyle = '#10b981'; // Emerald
+                // Structure: Tech Box with diagonal support
+                const size = 16;
+                const half = size / 2;
+                
+                ctx.fillStyle = 'rgba(245, 158, 11, 0.15)'; // Low opacity amber fill
+                ctx.strokeStyle = '#f59e0b'; // Amber stroke
+                ctx.lineWidth = 1;
+
+                // Main Box
+                ctx.fillRect(cx - half, cy - half, size, size);
+                ctx.strokeRect(cx - half, cy - half, size, size);
+                
+                // Diagonal Detail
                 ctx.beginPath();
-                ctx.arc(x + 10, y + 10, 6, 0, Math.PI * 2);
-                ctx.fill();
-            } else if (type === 'enemigo') {
-                ctx.strokeStyle = '#ef4444'; // Red
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(x + 4, y + 4);
-                ctx.lineTo(x + 16, y + 16);
-                ctx.moveTo(x + 16, y + 4);
-                ctx.lineTo(x + 4, y + 16);
+                ctx.moveTo(cx - half, cy + half);
+                ctx.lineTo(cx + half, cy - half);
                 ctx.stroke();
+
+            } else if (type === 'aliado') {
+                // Ally: Tactical Drone Unit (Circle with Core)
+                ctx.fillStyle = '#10b981'; // Emerald
+                ctx.strokeStyle = '#10b981';
+                
+                // Inner Core
+                ctx.beginPath();
+                ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Outer Shield Ring
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(cx, cy, 6.5, 0, Math.PI * 2);
+                ctx.stroke();
+
+            } else if (type === 'enemigo') {
+                // Enemy: Aggressive Hunter (Razor Star)
+                ctx.fillStyle = '#dc2626'; // Stronger Crimson Red
+                ctx.strokeStyle = '#7f1d1d'; // Dark Blood Outline
+                ctx.lineWidth = 1;
+                
+                const outer = 8.5;
+                const inner = 2.5; // Very pinched center = sharp blades
+                
+                // Draw Sharp Star Shape
+                ctx.beginPath();
+                for(let i = 0; i < 8; i++) {
+                    const radius = i % 2 === 0 ? outer : inner;
+                    const angle = i * Math.PI / 4;
+                    const x = cx + Math.cos(angle) * radius;
+                    const y = cy + Math.sin(angle) * radius;
+                    if(i===0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+
+                // Core: Sharp Diamond (Deadly Eye)
+                ctx.fillStyle = '#050505'; // Black
+                ctx.beginPath();
+                ctx.moveTo(cx, cy - 1.5);
+                ctx.lineTo(cx + 1.5, cy);
+                ctx.lineTo(cx, cy + 1.5);
+                ctx.lineTo(cx - 1.5, cy);
+                ctx.fill();
+
             } else if (type === 'curandero') {
-                ctx.fillStyle = '#3b82f6'; // Blue
-                ctx.fillRect(x + 8, y + 4, 4, 12);
-                ctx.fillRect(x + 4, y + 8, 12, 4);
+                // Healer: Synaptic Medical Cross (Floating Segments)
+                // "Less brute, more polished"
+                ctx.shadowColor = '#3b82f6';
+                ctx.shadowBlur = 4; // Soft glow to indicate energy
+                ctx.fillStyle = '#3b82f6';
+        
+                const gap = 2; // Space from center
+                const armLen = 5;
+                const armWidth = 3;
+        
+                // Top Arm
+                ctx.fillRect(cx - armWidth/2, cy - gap - armLen, armWidth, armLen);
+                // Bottom Arm
+                ctx.fillRect(cx - armWidth/2, cy + gap, armWidth, armLen);
+                // Left Arm
+                ctx.fillRect(cx - gap - armLen, cy - armWidth/2, armLen, armWidth);
+                // Right Arm
+                ctx.fillRect(cx + gap, cy - armWidth/2, armLen, armWidth);
+        
+                // Core (clean white dot)
+                ctx.shadowBlur = 0; // Reset shadow for sharp core
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(cx, cy, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Faint Ring to unify the floating parts
+                ctx.strokeStyle = 'rgba(59, 130, 246, 0.4)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+                ctx.stroke();
             }
 
-            // Health Bars
-            if (config.showHealthBars && type !== 'obstaculo') {
+            // Health Bars (HUD)
+            if (config.showHealthBars && type !== 'obstaculo' && type !== 'curandero') {
                 const hp = entidad.getVida();
-                const barWidth = 16;
+                const barWidth = 14;
                 const hpWidth = (hp / 100) * barWidth;
+                const barY = cy - 10;
                 
-                // Bg
-                ctx.fillStyle = '#333';
-                ctx.fillRect(x + 2, y - 4, barWidth, 3);
+                // Background Bar
+                ctx.fillStyle = '#111';
+                ctx.fillRect(cx - barWidth/2, barY, barWidth, 3);
                 
-                // Fg
-                ctx.fillStyle = hp > 50 ? '#10b981' : hp > 25 ? '#eab308' : '#ef4444';
-                ctx.fillRect(x + 2, y - 4, hpWidth, 3);
+                // Health Level
+                ctx.fillStyle = hp > 50 ? '#10b981' : hp > 25 ? '#f59e0b' : '#ef4444';
+                ctx.fillRect(cx - barWidth/2, barY, hpWidth, 3);
             }
         };
 
