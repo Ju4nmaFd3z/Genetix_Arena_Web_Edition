@@ -1,11 +1,51 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" rx="20" fill="#0a0a0a"/>
-  <circle cx="50" cy="50" r="35" stroke="#333" stroke-width="2" fill="none"/>
-  <path d="M50 15 L50 85" stroke="#10b981" stroke-width="4" stroke-linecap="round"/>
-  <path d="M15 50 L85 50" stroke="#10b981" stroke-width="4" stroke-linecap="round"/>
-  <circle cx="50" cy="50" r="12" fill="#10b981"/>
-  <rect x="45" y="10" width="10" height="15" fill="#0a0a0a"/>
-  <rect x="45" y="75" width="10" height="15" fill="#0a0a0a"/>
-  <rect x="10" y="45" width="15" height="10" fill="#0a0a0a"/>
-  <rect x="75" y="45" width="15" height="10" fill="#0a0a0a"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <filter id="ultra-glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Fondo circular oscuro -->
+  <circle cx="64" cy="64" r="64" fill="#050505"/>
+  
+  <!-- CRUZ VERDE DE FONDO (primero para que esté atrás) -->
+  <!-- Línea vertical verde - toca el círculo en top y bottom -->
+  <line x1="64" y1="0" x2="64" y2="128" stroke="#10b981" stroke-width="2" opacity="0.35"/>
+  
+  <!-- Línea horizontal verde - toca el círculo en left y right -->
+  <line x1="0" y1="64" x2="128" y2="64" stroke="#10b981" stroke-width="2" opacity="0.35"/>
+  
+  <!-- Anillo exterior APENAS visible -->
+  <circle cx="64" cy="64" r="58" fill="none" stroke="#10b981" stroke-width="0.8" opacity="0.15"/>
+  
+  <!-- 4 PUNTOS ENORMES Y BRILLANTES (cardinales) -->
+  <!-- Arriba (aliado - emerald) -->
+  <circle cx="64" cy="24" r="6.5" fill="#10b981" opacity="1" filter="url(#ultra-glow)"/>
+  
+  <!-- Derecha (enemigo - rojo) -->
+  <circle cx="104" cy="64" r="6.5" fill="#ef4444" opacity="1" filter="url(#ultra-glow)"/>
+  
+  <!-- Abajo (enemigo - rojo) -->
+  <circle cx="64" cy="104" r="6.5" fill="#ef4444" opacity="1" filter="url(#ultra-glow)"/>
+  
+  <!-- Izquierda (aliado - emerald) -->
+  <circle cx="24" cy="64" r="6.5" fill="#10b981" opacity="1" filter="url(#ultra-glow)"/>
+  
+  <!-- CENTRO MASIVO Y DOMINANTE -->
+  <!-- Anillo 1 (más externo) -->
+  <circle cx="64" cy="64" r="16" fill="none" stroke="#06b6d4" stroke-width="3" opacity="0.85" filter="url(#ultra-glow)"/>
+  
+  <!-- Anillo 2 (intermedio) -->
+  <circle cx="64" cy="64" r="10" fill="none" stroke="#10b981" stroke-width="2" opacity="0.7"/>
+  
+  <!-- Núcleo central brillante -->
+  <circle cx="64" cy="64" r="6" fill="#06b6d4" opacity="1" filter="url(#ultra-glow)"/>
+  
+  <!-- Punto central -->
+  <circle cx="64" cy="64" r="3" fill="#10b981" opacity="1"/>
+  
 </svg>
