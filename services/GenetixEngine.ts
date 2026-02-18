@@ -186,6 +186,23 @@ class Curandero extends Entidad {
     }
 }
 
+// Visual Effect Class for Deaths
+class DeathAnim {
+    x: number;
+    y: number;
+    type: 'aliado' | 'enemigo';
+    tick: number;
+    maxTicks: number;
+
+    constructor(x: number, y: number, type: 'aliado' | 'enemigo') {
+        this.x = x;
+        this.y = y;
+        this.type = type;
+        this.tick = 0;
+        this.maxTicks = 12; // Controls duration (12 ticks is smoother)
+    }
+}
+
 const MisFunciones = {
     posicionValida: (xDestino: number, yDestino: number, ALTO: number, ANCHO: number, grid: (Entity | null)[][]) => {
         if ((xDestino < 0 || xDestino >= ANCHO) || (yDestino < 0 || yDestino >= ALTO)) {
@@ -217,11 +234,12 @@ const MisFunciones = {
         return evento;
     },
 
-    limpiarMuertos: (listaEnemigos: Enemigo[], listaAliados: Aliado[], grid: (Entity | null)[][]) => {
+    limpiarMuertos: (listaEnemigos: Enemigo[], listaAliados: Aliado[], grid: (Entity | null)[][], listaEfectos: DeathAnim[]) => {
         for (let i = listaEnemigos.length - 1; i >= 0; i--) {
             if (listaEnemigos[i].getVida() <= 0) {
                 let e = listaEnemigos[i];
                 if (grid[e.posY][e.posX] === e) grid[e.posY][e.posX] = null;
+                listaEfectos.push(new DeathAnim(e.posX, e.posY, 'enemigo')); // Add visual FX
                 listaEnemigos.splice(i, 1);
             }
         }
@@ -230,6 +248,7 @@ const MisFunciones = {
             if (listaAliados[i].getVida() <= 0) {
                 let a = listaAliados[i];
                 if (grid[a.posY][a.posX] === a) grid[a.posY][a.posX] = null;
+                listaEfectos.push(new DeathAnim(a.posX, a.posY, 'aliado')); // Add visual FX
                 listaAliados.splice(i, 1);
             }
         }
@@ -252,7 +271,8 @@ export class GenetixEngine {
         obstaculos: [] as Obstaculo[],
         enemigos: [] as Enemigo[],
         aliados: [] as Aliado[],
-        curanderos: [] as Curandero[]
+        curanderos: [] as Curandero[],
+        efectos: [] as DeathAnim[]
     };
 
     constructor() {
@@ -265,7 +285,8 @@ export class GenetixEngine {
             obstaculos: [],
             enemigos: [],
             aliados: [],
-            curanderos: []
+            curanderos: [],
+            efectos: []
         };
         this.falloutTicks = 0;
     }
@@ -316,7 +337,7 @@ export class GenetixEngine {
         this.falloutTicks = this.MAX_FALLOUT;
 
         // Clean up immediately
-        MisFunciones.limpiarMuertos(this.listas.enemigos, this.listas.aliados, this.grid);
+        MisFunciones.limpiarMuertos(this.listas.enemigos, this.listas.aliados, this.grid, this.listas.efectos);
 
         return [
             `PROTOCOLO OMEGA EJECUTADO. ${toDestroy} HOSTILES ELIMINADOS. PRECAUCIÓN: NIEBLA RADIACTIVA.`,
@@ -326,6 +347,14 @@ export class GenetixEngine {
 
     update(): string | null {
         let evento: string | null = null;
+
+        // Process Death Effects (Update Ticks)
+        for (let i = this.listas.efectos.length - 1; i >= 0; i--) {
+            this.listas.efectos[i].tick++;
+            if (this.listas.efectos[i].tick >= this.listas.efectos[i].maxTicks) {
+                this.listas.efectos.splice(i, 1);
+            }
+        }
 
         // Fallout Logic (Aggressive & Fast)
         if (this.falloutTicks > 0) {
@@ -376,8 +405,8 @@ export class GenetixEngine {
         let eventoColision = MisFunciones.detectarYResolverColisiones(this.listas.enemigos, this.listas.aliados);
         if (eventoColision) evento = eventoColision;
 
-        // 5. Limpiar Muertos
-        MisFunciones.limpiarMuertos(this.listas.enemigos, this.listas.aliados, this.grid);
+        // 5. Limpiar Muertos (This triggers new DeathAnims)
+        MisFunciones.limpiarMuertos(this.listas.enemigos, this.listas.aliados, this.grid, this.listas.efectos);
         
         return evento;
     }
@@ -392,6 +421,86 @@ export class GenetixEngine {
             ctx.fillStyle = `rgba(255, 140, 0, ${opacity})`;
             ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         }
+
+        // --- DRAW DEATH EFFECTS (Updated for Elegance) ---
+        this.listas.efectos.forEach(fx => {
+            let cx = fx.x * this.CELL_SIZE + (this.CELL_SIZE / 2);
+            let cy = fx.y * this.CELL_SIZE + (this.CELL_SIZE / 2);
+            const progress = fx.tick / fx.maxTicks; // 0.0 to 1.0
+            const easeOut = 1 - Math.pow(1 - progress, 3); // Cubic ease out for smooth motion
+            
+            ctx.save();
+            
+            if (fx.type === 'enemigo') {
+                // Enemy: "System Purge" - Digital Brackets Expanding
+                const opacity = 1 - easeOut;
+                ctx.strokeStyle = `rgba(239, 68, 68, ${opacity})`;
+                ctx.lineWidth = 1.5;
+                
+                const dist = 5 + (easeOut * 10); // Expands from 5px to 15px
+                const len = 4; // Corner length
+
+                // Top Left Bracket
+                ctx.beginPath();
+                ctx.moveTo(cx - dist, cy - dist + len);
+                ctx.lineTo(cx - dist, cy - dist);
+                ctx.lineTo(cx - dist + len, cy - dist);
+                ctx.stroke();
+
+                // Top Right Bracket
+                ctx.beginPath();
+                ctx.moveTo(cx + dist - len, cy - dist);
+                ctx.lineTo(cx + dist, cy - dist);
+                ctx.lineTo(cx + dist, cy - dist + len);
+                ctx.stroke();
+
+                // Bottom Left Bracket
+                ctx.beginPath();
+                ctx.moveTo(cx - dist, cy + dist - len);
+                ctx.lineTo(cx - dist, cy + dist);
+                ctx.lineTo(cx - dist + len, cy + dist);
+                ctx.stroke();
+
+                // Bottom Right Bracket
+                ctx.beginPath();
+                ctx.moveTo(cx + dist - len, cy + dist);
+                ctx.lineTo(cx + dist, cy + dist);
+                ctx.lineTo(cx + dist, cy + dist - len);
+                ctx.stroke();
+
+                // Core Glitch Dot (disappears very fast)
+                if (progress < 0.2) {
+                     ctx.fillStyle = `rgba(239, 68, 68, ${1 - (progress * 5)})`;
+                     ctx.fillRect(cx - 1.5, cy - 1.5, 3, 3);
+                }
+
+            } else {
+                // Ally: "Signal Lost" - Thin, smooth emerald ripples
+                const opacity = 1 - progress;
+                ctx.strokeStyle = `rgba(16, 185, 129, ${opacity})`;
+                ctx.lineWidth = 1;
+
+                // Main Expanding Ring
+                const maxRadius = this.CELL_SIZE * 0.9;
+                const currentRadius = 3 + (easeOut * maxRadius);
+                
+                ctx.beginPath();
+                ctx.arc(cx, cy, currentRadius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Secondary Echo Ring (Lagging behind slightly)
+                if (progress > 0.1) {
+                    const echoRadius = 2 + ((easeOut - 0.1) * maxRadius * 0.8);
+                    ctx.strokeStyle = `rgba(16, 185, 129, ${opacity * 0.5})`;
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, echoRadius, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+
+            ctx.restore();
+        });
+
 
         const drawEntity = (entidad: Entity, color: string, type: string) => {
             // Calculate center of the cell for geometric drawing

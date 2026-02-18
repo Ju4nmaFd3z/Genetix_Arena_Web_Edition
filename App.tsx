@@ -110,7 +110,7 @@ const App: React.FC = () => {
         // Ensure targets are clear at start
         setTargetCoordinates([]);
         
-        addLog("⚠ ALERTA: SECUENCIA OMEGA INICIADA.", "system");
+        addLog("⚠ ALERTA: SECUENCIA OMEGA INICIADA. T-MINUS 3...", "system");
 
         // Sequence Countdown
         setTimeout(() => addLog("⚠ T-MINUS 2...", "system"), 1000);
@@ -368,7 +368,7 @@ const App: React.FC = () => {
                                             {targetCoordinates.map((target, idx) => (
                                                 <div 
                                                     key={idx}
-                                                    className="absolute w-12 h-12 flex items-center justify-center"
+                                                    className="absolute w-20 h-20 flex items-center justify-center pointer-events-none"
                                                     style={{ 
                                                         // IMPORTANT: Adjusted logic to point to CENTER of cell
                                                         left: `${((target.x + 0.5) / 75) * 100}%`, 
@@ -376,25 +376,33 @@ const App: React.FC = () => {
                                                         transform: 'translate(-50%, -50%)',
                                                     }}
                                                 >
-                                                    {/* Tactical Box Corners */}
-                                                    <div className="absolute inset-0 border border-green-500/50 opacity-0 animate-[ping_1.5s_ease-out_infinite]" style={{ animationDelay: `${idx * 0.1}s` }}></div>
+                                                    {/* Outer Ring Animation - Scale In */}
+                                                    <div 
+                                                        className="absolute w-full h-full border border-green-500/20 rounded-full animate-[scale-in_0.3s_ease-out_forwards]" 
+                                                        style={{ animationDelay: `${idx * 0.05}s` }}
+                                                    ></div>
                                                     
-                                                    {/* Main Reticle */}
-                                                    <div className="absolute w-full h-full border-2 border-green-500/80 rounded-[2px] shadow-[0_0_10px_rgba(34,197,94,0.5)]">
-                                                         {/* Crosshair pips */}
-                                                         <div className="absolute top-1/2 left-0 w-1 h-[1px] bg-green-500"></div>
-                                                         <div className="absolute top-1/2 right-0 w-1 h-[1px] bg-green-500"></div>
-                                                         <div className="absolute top-0 left-1/2 w-[1px] h-1 bg-green-500"></div>
-                                                         <div className="absolute bottom-0 left-1/2 w-[1px] h-1 bg-green-500"></div>
-                                                    </div>
+                                                    {/* Spinning Dashed Ring (Slow) */}
+                                                    <div className="absolute w-14 h-14 border border-dashed border-green-400/60 rounded-full animate-[spin_6s_linear_infinite]"></div>
+                                                    
+                                                    {/* Inner Lock Ring (Rotating counter-clockwise Fast) */}
+                                                    <div className="absolute w-10 h-10 border-t-2 border-b-2 border-green-500 rounded-full animate-[spin_3s_linear_infinite_reverse] shadow-[0_0_10px_rgba(34,197,94,0.6)]"></div>
+                                                    
+                                                    {/* Center Target Point */}
+                                                    <div className="absolute w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,1)]"></div>
+                                                    
+                                                    {/* Crosshair Lines */}
+                                                    <div className="absolute w-full h-[1px] bg-green-500/20"></div>
+                                                    <div className="absolute h-full w-[1px] bg-green-500/20"></div>
 
-                                                    {/* Tracking Data */}
-                                                    <div className="absolute -right-16 -top-2 flex flex-col items-start">
-                                                        <div className="bg-black/80 text-[6px] px-1 border-l border-green-500 text-green-400 leading-tight">
-                                                            TGT-{idx < 9 ? '0'+(idx+1) : idx+1}
+                                                    {/* Data Label */}
+                                                    <div className="absolute top-1 left-12 bg-black/80 border border-green-500/50 p-1 backdrop-blur-sm min-w-[70px]">
+                                                        <div className="text-[8px] text-green-400 font-mono flex justify-between items-center mb-0.5">
+                                                            <span>LOCK</span>
+                                                            <span className="text-red-500 font-bold animate-pulse">●</span>
                                                         </div>
-                                                        <div className="text-[6px] text-green-600 leading-tight">
-                                                            x:{target.x} y:{target.y}
+                                                        <div className="text-[6px] text-green-600 font-mono tracking-wider">
+                                                            ID: {idx.toString().padStart(3, '0')}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -667,6 +675,11 @@ const App: React.FC = () => {
                 @keyframes spin {
                     from { transform: rotate(0deg); }
                     to { transform: rotate(360deg); }
+                }
+
+                @keyframes scale-in {
+                    0% { transform: scale(2); opacity: 0; }
+                    100% { transform: scale(1); opacity: 1; }
                 }
 
                 @keyframes hud-cycle {
