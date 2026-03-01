@@ -188,7 +188,7 @@ const ChaseAnimation = () => {
                         </div>
                     ) : (
                         // Enemy: Razor Star (Matches Canvas)
-                        <div className="relative w-5 h-5 flex items-center justify-center text-red-600">
+                        <div className="relative w-7 h-7 flex items-center justify-center text-red-600">
                             <svg viewBox="0 0 24 24" className="w-full h-full drop-shadow-sm" style={{ filter: 'drop-shadow(0 0 2px rgba(220,38,38,0.6))' }}>
                                 <path
                                     d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z"
