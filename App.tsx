@@ -309,6 +309,8 @@ const App: React.FC = () => {
         }, INTERVAL);
     };
 
+    // [AUDIO SYSTEM] - Guard: desbloquear elementos de audio solo una vez
+    const hasUnlockedRef = useRef(false);
 
     // [AUDIO SYSTEM] - Botón mute
     const toggleMute = () => {
@@ -320,6 +322,22 @@ const App: React.FC = () => {
             [landingAudioRef, gameAudioRef, alliesWinAudioRef, enemiesWinAudioRef, drawAudioRef]
                 .forEach(r => r.current?.pause());
         } else {
+            // En iOS/Safari cada HTMLAudioElement debe recibir play() dentro de un gesto
+            // de usuario para quedar desbloqueado para llamadas futuras desde useEffect.
+            // play() + pause() síncronos registran el gesto sin interferir con la pista
+            // correcta que se reproduce justo después. La promesa rechaza con AbortError
+            // (capturado por el .catch) pero el elemento queda desbloqueado.
+            if (!hasUnlockedRef.current) {
+                hasUnlockedRef.current = true;
+                [landingAudioRef, gameAudioRef, alliesWinAudioRef, enemiesWinAudioRef, drawAudioRef]
+                    .forEach(r => {
+                        if (r.current) {
+                            r.current.play().catch(() => { });
+                            r.current.pause();
+                        }
+                    });
+            }
+
             // Reanudar la pista que corresponde exactamente al estado actual
             if (view === 'landing') {
                 landingAudioRef.current?.play().catch(() => { });
@@ -328,7 +346,6 @@ const App: React.FC = () => {
             } else if (gameResult === 'ENEMIES_WIN') {
                 enemiesWinAudioRef.current?.play().catch(() => { });
             } else if (gameResult !== null) {
-                // Empate u otro resultado
                 drawAudioRef.current?.play().catch(() => { });
             } else {
                 gameAudioRef.current?.play().catch(() => { });
