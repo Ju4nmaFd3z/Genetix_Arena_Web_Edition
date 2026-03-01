@@ -45,6 +45,8 @@ const App: React.FC = () => {
     const [showFalloutGrain, setShowFalloutGrain] = useState(false);
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const canvasWrapperRef = useRef<HTMLDivElement>(null);
+    const [canvasRenderedHeight, setCanvasRenderedHeight] = useState(0);
     const engineRef = useRef<GenetixEngine>(new GenetixEngine());
     const lastTickRef = useRef<number>(0);
     const animationFrameRef = useRef<number>(0);
@@ -66,6 +68,22 @@ const App: React.FC = () => {
 
     // Ref to track previous entity counts to avoid unnecessary resets on other state changes (like Pause)
     const prevEntityCountsRef = useRef(config.entityCounts);
+
+    // [TARGETING FIX] - Mide la altura real del wrapper del canvas para
+    // que los reticles de targeting sean círculos perfectos (no óvalos).
+    // El canvas tiene aspecto 3:1, así que % width ≠ % height.
+    // Usando la altura en px podemos dar el mismo valor a width y height.
+    useEffect(() => {
+        const wrapper = canvasWrapperRef.current;
+        if (!wrapper) return;
+        const ro = new ResizeObserver(entries => {
+            for (const entry of entries) {
+                setCanvasRenderedHeight(entry.contentRect.height);
+            }
+        });
+        ro.observe(wrapper);
+        return () => ro.disconnect();
+    }, []);
 
     // Logger Utility
     const addLog = useCallback((msg: string, type: LogEntry['type'] = 'info') => {
@@ -493,7 +511,7 @@ const App: React.FC = () => {
                         {/* Decorative Grid Background */}
                         <div className="absolute inset-0 bg-grid-pattern bg-[length:40px_40px] opacity-10 pointer-events-none"></div>
 
-                        <div className={`
+                        <div ref={canvasWrapperRef} className={`
                             relative border border-space-border shadow-2xl shadow-black bg-black w-full max-w-[95%] aspect-[3/1] 
                             ${isExploding ? 'animate-omega-sequence' : 'animate-idle-drift'}
                         `}>
@@ -538,62 +556,70 @@ const App: React.FC = () => {
                                             <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(0,255,0,0.06),rgba(0,255,0,0.02),rgba(0,0,0,0.06))] bg-[length:100%_2px,3px_100%] pointer-events-none"></div>
 
                                             {/* Reticles */}
-                                            {targetCoordinates.map((target, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    className="absolute flex items-center justify-center pointer-events-none"
-                                                    style={{
-                                                        // IMPORTANT: Adjusted logic to point to CENTER of cell
-                                                        left: `${((target.x + 0.5) / 75) * 100}%`,
-                                                        top: `${((target.y + 0.5) / 25) * 100}%`,
-                                                        transform: 'translate(-50%, -50%)',
-                                                        // FIX: Use height-based sizing so circles stay circular.
-                                                        // The canvas is 3:1 aspect ratio, so % widths ≠ % heights.
-                                                        // By sizing with '8vh' for both width AND height we get a
-                                                        // true square container, which makes rounded-full circular.
-                                                        width: '8vh',
-                                                        height: '8vh',
-                                                    }}
-                                                >
-                                                    {/* Outer Ring Animation - Scale In */}
+                                            {targetCoordinates.map((target, idx) => {
+                                                // FIX: Use the actual rendered height of the canvas wrapper (in px)
+                                                // to size the reticle. Since the canvas is 3:1 aspect ratio,
+                                                // percentage-based widths are 3× longer than heights, causing ovals.
+                                                // By using the same px value for both width & height we get true circles.
+                                                const H = canvasRenderedHeight;
+                                                const reticleSize = H * 0.32;  // outer ring  (~32% of height)
+                                                const dashedSize = H * 0.22;  // dashed ring (~22%)
+                                                const innerSize = H * 0.16;  // inner ring  (~16%)
+                                                const labelOffset = reticleSize / 2 + 2;
+
+                                                return (
                                                     <div
-                                                        className="absolute w-full h-full border border-green-500/20 rounded-full animate-[scale-in_0.3s_ease-out_forwards]"
-                                                        style={{ animationDelay: `${idx * 0.05}s` }}
-                                                    ></div>
-
-                                                    {/* Spinning Dashed Ring (Slow) */}
-                                                    <div
-                                                        className="absolute border border-dashed border-green-400/60 rounded-full animate-[spin_6s_linear_infinite]"
-                                                        style={{ width: '5.5vh', height: '5.5vh' }}
-                                                    ></div>
-
-                                                    {/* Inner Lock Ring (Rotating counter-clockwise Fast) */}
-                                                    <div
-                                                        className="absolute border-t-2 border-b-2 border-green-500 rounded-full animate-[spin_3s_linear_infinite_reverse] shadow-[0_0_10px_rgba(34,197,94,0.6)]"
-                                                        style={{ width: '4vh', height: '4vh' }}
-                                                    ></div>
-
-                                                    {/* Center Target Point */}
-                                                    <div className="absolute w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,1)]"></div>
-
-                                                    {/* Crosshair Lines */}
-                                                    <div className="absolute w-full h-[1px] bg-green-500/20"></div>
-                                                    <div className="absolute h-full w-[1px] bg-green-500/20"></div>
-
-                                                    {/* Data Label */}
-                                                    <div className="absolute bg-black/80 border border-green-500/50 p-1 backdrop-blur-sm min-w-[70px]"
-                                                        style={{ top: '0.2vh', left: '4.5vh' }}
+                                                        key={idx}
+                                                        className="absolute flex items-center justify-center pointer-events-none"
+                                                        style={{
+                                                            left: `${((target.x + 0.5) / 75) * 100}%`,
+                                                            top: `${((target.y + 0.5) / 25) * 100}%`,
+                                                            transform: 'translate(-50%, -50%)',
+                                                            width: reticleSize,
+                                                            height: reticleSize,
+                                                        }}
                                                     >
-                                                        <div className="text-[8px] text-green-400 font-mono flex justify-between items-center mb-0.5">
-                                                            <span>LOCK</span>
-                                                            <span className="text-red-500 font-bold animate-pulse">●</span>
-                                                        </div>
-                                                        <div className="text-[6px] text-green-600 font-mono tracking-wider">
-                                                            ID: {idx.toString().padStart(3, '0')}
+                                                        {/* Outer Ring Animation - Scale In */}
+                                                        <div
+                                                            className="absolute w-full h-full border border-green-500/20 rounded-full animate-[scale-in_0.3s_ease-out_forwards]"
+                                                            style={{ animationDelay: `${idx * 0.05}s` }}
+                                                        ></div>
+
+                                                        {/* Spinning Dashed Ring (Slow) */}
+                                                        <div
+                                                            className="absolute border border-dashed border-green-400/60 rounded-full animate-[spin_6s_linear_infinite]"
+                                                            style={{ width: dashedSize, height: dashedSize }}
+                                                        ></div>
+
+                                                        {/* Inner Lock Ring (Rotating counter-clockwise Fast) */}
+                                                        <div
+                                                            className="absolute border-t-2 border-b-2 border-green-500 rounded-full animate-[spin_3s_linear_infinite_reverse] shadow-[0_0_10px_rgba(34,197,94,0.6)]"
+                                                            style={{ width: innerSize, height: innerSize }}
+                                                        ></div>
+
+                                                        {/* Center Target Point */}
+                                                        <div className="absolute w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,1)]"></div>
+
+                                                        {/* Crosshair Lines */}
+                                                        <div className="absolute w-full h-[1px] bg-green-500/20"></div>
+                                                        <div className="absolute h-full w-[1px] bg-green-500/20"></div>
+
+                                                        {/* Data Label */}
+                                                        <div
+                                                            className="absolute bg-black/80 border border-green-500/50 p-1 backdrop-blur-sm min-w-[70px]"
+                                                            style={{ top: 0, left: labelOffset }}
+                                                        >
+                                                            <div className="text-[8px] text-green-400 font-mono flex justify-between items-center mb-0.5">
+                                                                <span>LOCK</span>
+                                                                <span className="text-red-500 font-bold animate-pulse">●</span>
+                                                            </div>
+                                                            <div className="text-[6px] text-green-600 font-mono tracking-wider">
+                                                                ID: {idx.toString().padStart(3, '0')}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
 
                                             {/* Centered Locking Text - Military Style */}
                                             <div className="absolute bottom-8 left-0 right-0 flex justify-center items-end">
