@@ -309,28 +309,6 @@ const App: React.FC = () => {
         }, INTERVAL);
     };
 
-    // [AUDIO SYSTEM] - Unlock Audio Context for Mobile
-    const unlockAudioContext = () => {
-        const audioElements = [
-            landingAudioRef.current,
-            gameAudioRef.current,
-            alliesWinAudioRef.current,
-            enemiesWinAudioRef.current,
-            drawAudioRef.current
-        ];
-
-        audioElements.forEach(audio => {
-            if (audio) {
-                // Play and immediately pause to unlock the audio context on mobile
-                audio.play().then(() => {
-                    audio.pause();
-                    // Restore loop if needed (though we only paused)
-                }).catch(() => {
-                    // Ignore errors if autoplay is blocked or already playing
-                });
-            }
-        });
-    };
 
     // [AUDIO SYSTEM] - Botón mute
     const toggleMute = () => {
@@ -342,9 +320,6 @@ const App: React.FC = () => {
             [landingAudioRef, gameAudioRef, alliesWinAudioRef, enemiesWinAudioRef, drawAudioRef]
                 .forEach(r => r.current?.pause());
         } else {
-            // Unlock all audio contexts on mobile interaction
-            unlockAudioContext();
-
             // Reanudar la pista que corresponde exactamente al estado actual
             if (view === 'landing') {
                 landingAudioRef.current?.play().catch(() => { });
@@ -504,10 +479,7 @@ const App: React.FC = () => {
         if (view === 'landing') {
             return (
                 <LandingPage
-                    onStart={() => {
-                        unlockAudioContext();
-                        switchView('game', () => initializeSystem(false));
-                    }}
+                    onStart={() => switchView('game', () => initializeSystem(false))}
                     isMuted={isMuted}
                     onToggleMute={toggleMute}
                 />
