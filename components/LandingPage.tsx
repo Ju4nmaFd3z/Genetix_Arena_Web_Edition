@@ -182,13 +182,13 @@ const ChaseAnimation = () => {
                     {/* Entity Shape */}
                     {e.type === 'ally' ? (
                         // Ally: Circle with Core (Matches Canvas) - Larger
-                        <div className="relative w-8 h-8 flex items-center justify-center">
+                        <div className="relative w-5 h-5 flex items-center justify-center">
                             <div className="absolute inset-0 rounded-full border-[2px] border-emerald-500"></div>
-                            <div className="w-3 h-3 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                            <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_6px_rgba(16,185,129,0.5)]"></div>
                         </div>
                     ) : (
                         // Enemy: Razor Star (Matches Canvas)
-                        <div className="relative w-8 h-8 flex items-center justify-center text-red-600">
+                        <div className="relative w-5 h-5 flex items-center justify-center text-red-600">
                             <svg viewBox="0 0 24 24" className="w-full h-full drop-shadow-sm" style={{ filter: 'drop-shadow(0 0 2px rgba(220,38,38,0.6))' }}>
                                 <path
                                     d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z"
