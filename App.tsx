@@ -44,6 +44,10 @@ const App: React.FC = () => {
     const engineRef = useRef<GenetixEngine>(new GenetixEngine());
     const lastTickRef = useRef<number>(0);
     const animationFrameRef = useRef<number>(0);
+
+    // [AUDIO SYSTEM] - Referencias para el sistema de sonido
+    const landingAudioRef = useRef<HTMLAudioElement | null>(null);
+    const gameAudioRef = useRef<HTMLAudioElement | null>(null);
     
     // Ref to track previous entity counts to avoid unnecessary resets on other state changes (like Pause)
     const prevEntityCountsRef = useRef(config.entityCounts);
@@ -205,6 +209,56 @@ const App: React.FC = () => {
         // Keep loop alive
         animationFrameRef.current = requestAnimationFrame(loop);
     };
+
+    // [AUDIO SYSTEM] - Gestión de Música de Fondo
+    useEffect(() => {
+        // 1. Inicializar Pistas (Rutas placeholder - Reemplazar con assets reales)
+        landingAudioRef.current = new Audio('/public/sounds/AudioLandingPage.mp3'); 
+        landingAudioRef.current.loop = true;
+        landingAudioRef.current.volume = 0.5; // Ajustar volumen (0.0 a 1.0)
+
+        gameAudioRef.current = new Audio('/public/sounds/AudioBatalla.mp3');
+        gameAudioRef.current.loop = true;
+        gameAudioRef.current.volume = 0.4;
+
+        // 2. Intentar reproducir Landing al montar (Autoplay puede requerir interacción del usuario)
+        const startLanding = async () => {
+            try {
+                await landingAudioRef.current?.play();
+            } catch (err) {
+                console.log("Autoplay bloqueado por el navegador. Esperando interacción.");
+            }
+        };
+        startLanding();
+
+        return () => {
+            // Cleanup
+            landingAudioRef.current?.pause();
+            gameAudioRef.current?.pause();
+        };
+    }, []);
+
+    // 3. Cambiar pista al cambiar de vista
+    useEffect(() => {
+        const handleAudioSwitch = async () => {
+            try {
+                if (view === 'landing') {
+                    // Volver a Landing
+                    gameAudioRef.current?.pause();
+                    if (gameAudioRef.current) gameAudioRef.current.currentTime = 0;
+                    await landingAudioRef.current?.play();
+                } else if (view === 'game') {
+                    // Entrar al Sistema
+                    landingAudioRef.current?.pause();
+                    if (landingAudioRef.current) landingAudioRef.current.currentTime = 0;
+                    await gameAudioRef.current?.play();
+                }
+            } catch (err) {
+                console.error("Error en transición de audio:", err);
+            }
+        };
+        handleAudioSwitch();
+    }, [view]);
 
     // React to running state
     useEffect(() => {
