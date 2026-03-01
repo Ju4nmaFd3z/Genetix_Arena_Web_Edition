@@ -18,6 +18,10 @@ const DEFAULT_CONFIG: GameConfig = {
     }
 };
 
+// [AUDIO SYSTEM] - Volúmenes por defecto de cada pista
+// Declarado fuera del componente para evitar recreación en cada render
+const VOL = { landing: 0.5, battle: 0.4, result: 0.6 };
+
 const App: React.FC = () => {
     const [view, setView] = useState<'landing' | 'game'>('landing');
     const [opacity, setOpacity] = useState(1); // State for transition opacity
@@ -44,6 +48,11 @@ const App: React.FC = () => {
     const engineRef = useRef<GenetixEngine>(new GenetixEngine());
     const lastTickRef = useRef<number>(0);
     const animationFrameRef = useRef<number>(0);
+
+    // [GAME LOOP] - Ref para evitar stale closure en requestAnimationFrame.
+    // loopRef.current se sobreescribe en cada render, así el RAF siempre
+    // lee los valores más recientes de isRunning, config, etc.
+    const loopRef = useRef<(timestamp: number) => void>(() => { });
 
     // [AUDIO SYSTEM] - Referencias para el sistema de sonido
     const landingAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -178,8 +187,10 @@ const App: React.FC = () => {
         }, 12000);
     };
 
-    // The Game Loop
-    const loop = (timestamp: number) => {
+    // [GAME LOOP] - Se asigna a loopRef.current en cada render.
+    // Esto garantiza que el RAF siempre ejecute la versión actualizada
+    // con los valores más recientes de isRunning y config (sin stale closure).
+    loopRef.current = (timestamp: number) => {
         if (!isRunning) return;
 
         const engine = engineRef.current;
@@ -207,11 +218,8 @@ const App: React.FC = () => {
             lastTickRef.current = timestamp;
         }
 
-        animationFrameRef.current = requestAnimationFrame(loop);
+        animationFrameRef.current = requestAnimationFrame(loopRef.current);
     };
-
-    // [AUDIO SYSTEM] - Volúmenes por defecto de cada pista
-    const VOL = { landing: 0.5, battle: 0.4, result: 0.6 };
 
     // [AUDIO SYSTEM] - Inicializar pistas
     // NOTA: Archivos en /public/tracks/
@@ -241,7 +249,7 @@ const App: React.FC = () => {
             [landingAudioRef, gameAudioRef, alliesWinAudioRef, enemiesWinAudioRef, drawAudioRef]
                 .forEach(r => r.current?.pause());
         };
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps — Las referencias de audio son estables (useRef). Incluirlas causaría reinicializar el sistema de audio en cada render.
 
     // [AUDIO SYSTEM] - Cancela el fade activo (si lo hay)
     const stopFade = () => {
@@ -325,7 +333,7 @@ const App: React.FC = () => {
 
         if (!incoming || !outgoing) return;
         crossfade(outgoing, outgoingDefVol, incoming, incomingVol);
-    }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [view]); // eslint-disable-line react-hooks/exhaustive-deps — crossfade y VOL son funciones/constantes estables declaradas fuera del ciclo de render. Incluir crossfade causaría un bucle infinito.
 
     // [AUDIO SYSTEM] - Pista de resultado: crossfade al aparecer tarjeta / limpieza al reiniciar
     useEffect(() => {
@@ -360,12 +368,12 @@ const App: React.FC = () => {
                 if (view === 'game') gameAudioRef.current.play().catch(() => { });
             }
         }
-    }, [gameResult]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [gameResult]); // eslint-disable-line react-hooks/exhaustive-deps — isMuted y view se leen como valores puntuales al dispararse el efecto, no como dependencias reactivas. Incluirlos causaría crossfades no deseados al pausar o cambiar vista.
 
     // React to running state
     useEffect(() => {
         if (isRunning) {
-            animationFrameRef.current = requestAnimationFrame(loop);
+            animationFrameRef.current = requestAnimationFrame(loopRef.current);
         } else {
             cancelAnimationFrame(animationFrameRef.current);
             // Draw one last frame even if paused to update visuals
@@ -373,7 +381,10 @@ const App: React.FC = () => {
             if (ctx) engineRef.current.draw(ctx, config);
         }
         return () => cancelAnimationFrame(animationFrameRef.current);
-    }, [isRunning, config]); // config dependency ensures redraw on toggle changes (health bars)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        // loopRef es un ref (referencia estable), no necesita estar en deps.
+        // config se incluye para forzar redibujado cuando cambia showHealthBars.
+    }, [isRunning, config]);
 
     // Auto-Restart on Entity Config Change
     useEffect(() => {
@@ -710,7 +721,9 @@ const App: React.FC = () => {
                             onSetDefaults={() => setConfig(DEFAULT_CONFIG)}
                             onAbort={() => switchView('landing', () => setIsRunning(false))}
                             // New Props for Omega Protocol
-                            isEmergencyAvailable={stats.allies === 1 && stats.enemies > 0}
+                            // Omega Protocol se activa cuando quedan ≤3 aliados (umbral más robusto
+                            // que exactamente 1, evita que la ventana se cierre si mueren en el mismo tick)
+                            isEmergencyAvailable={stats.allies <= 3 && stats.enemies > 0}
                             isExploding={isExploding}
                             hasNukeBeenUsed={hasNukeBeenUsed}
                             onTriggerEmergency={handleOmegaProtocol}

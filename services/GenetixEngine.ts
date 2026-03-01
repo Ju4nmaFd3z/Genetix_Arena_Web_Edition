@@ -18,7 +18,7 @@ class Entidad implements Entity {
     setPosX(x: number) { this.posX = x; }
     setPosY(y: number) { this.posY = y; }
     getVida() { return this.vida; }
-    
+
     setVida(vida: number) {
         if (vida < 0) this.vida = 0;
         else if (vida > 100) this.vida = 100;
@@ -36,7 +36,7 @@ class Entidad implements Entity {
     }
 }
 
-class Obstaculo extends Entidad {}
+class Obstaculo extends Entidad { }
 
 class Aliado extends Entidad {
     Escapa(listaEnemigos: Enemigo[], ALTO: number, ANCHO: number, grid: (Entity | null)[][]) {
@@ -53,7 +53,8 @@ class Aliado extends Entidad {
 
         if (distanciaMinima > 3 || enemigo === null) return;
 
-        let menorDistancia = 0;
+        // Tracks the best escape distance found so far (we want to MAXIMIZE distance from enemy)
+        let mejorDistanciaAlEjarse = 0;
         let mejorVx = 0;
         let mejorVy = 0;
 
@@ -68,8 +69,8 @@ class Aliado extends Entidad {
                 let posicionPrueba = new Entidad(nuevaX, nuevaY);
                 let distancia = posicionPrueba.getDistancia(enemigo);
 
-                if (distancia > menorDistancia) {
-                    menorDistancia = distancia;
+                if (distancia > mejorDistanciaAlEjarse) {
+                    mejorDistanciaAlEjarse = distancia;
                     mejorVx = DIRECCION_X[i];
                     mejorVy = DIRECCION_Y[i];
                 }
@@ -77,7 +78,7 @@ class Aliado extends Entidad {
         }
 
         if (mejorVx !== 0 || mejorVy !== 0) {
-            grid[this.posY][this.posX] = null; 
+            grid[this.posY][this.posX] = null;
             this.setPosX(this.getPosX() + mejorVx);
             this.setPosY(this.getPosY() + mejorVy);
             grid[this.posY][this.posX] = this;
@@ -140,7 +141,11 @@ class Curandero extends Entidad {
 
         for (let aliado of listaAliados) {
             let distancia = this.getDistancia(aliado);
-            if (distancia <= 10 && aliado.getVida() < menorVida) {
+            // Prefer ally with lowest HP within range; on HP tie, prefer the closer one
+            if (distancia <= 10 && (
+                aliado.getVida() < menorVida ||
+                (aliado.getVida() === menorVida && distancia < distanciaAliadoMasHerido)
+            )) {
                 menorVida = aliado.getVida();
                 aliadoMasHerido = aliado;
                 distanciaAliadoMasHerido = distancia;
@@ -154,7 +159,8 @@ class Curandero extends Entidad {
             return;
         }
 
-        let mayorDistancia = Number.MAX_VALUE;
+        // Tracks the minimum distance found so far (we want to APPROACH the injured ally)
+        let menorDistanciaAlAliado = Number.MAX_VALUE;
         let mejorVx = 0;
         let mejorVy = 0;
 
@@ -169,8 +175,8 @@ class Curandero extends Entidad {
                 let posicionPrueba = new Entidad(nuevaX, nuevaY);
                 let distancia = posicionPrueba.getDistancia(aliadoMasHerido);
 
-                if (distancia < mayorDistancia) {
-                    mayorDistancia = distancia;
+                if (distancia < menorDistanciaAlAliado) {
+                    menorDistanciaAlAliado = distancia;
                     mejorVx = DIRECCION_X[i];
                     mejorVy = DIRECCION_Y[i];
                 }
@@ -216,15 +222,15 @@ const MisFunciones = {
 
     detectarYResolverColisiones: (listaEnemigos: Enemigo[], listaAliados: Aliado[]) => {
         let evento = null;
-        
+
         for (let enemigo of listaEnemigos) {
             for (let aliado of listaAliados) {
                 let diferenciaX = Math.abs(enemigo.getPosX() - aliado.getPosX());
                 let diferenciaY = Math.abs(enemigo.getPosY() - aliado.getPosY());
-                
-                if ((diferenciaX === 0 && diferenciaY === 0) || 
+
+                if ((diferenciaX === 0 && diferenciaY === 0) ||
                     (diferenciaX <= 1 && diferenciaY <= 1 && (diferenciaX + diferenciaY) <= 2)) {
-                    
+
                     enemigo.modificarVida(-25);
                     aliado.modificarVida(-35);
                     evento = "Hostiles atacando fuerzas aliadas. Daño recibido.";
@@ -261,7 +267,7 @@ export class GenetixEngine {
     ANCHO = 75;
     ALTO = 25;
     CELL_SIZE = 20;
-    
+
     // Radiation mechanics
     falloutTicks = 0;
     MAX_FALLOUT = 40; // approx 8-10 seconds at 200ms
@@ -299,14 +305,14 @@ export class GenetixEngine {
         this.spawnEntities(Curandero, config.entityCounts.healers, this.listas.curanderos);
     }
 
-    spawnEntities(Clase: any, cantidad: number, listaDestino: any[]) {
+    spawnEntities<T extends Entidad>(Clase: new (x: number, y: number) => T, cantidad: number, listaDestino: T[]) {
         let count = 0;
         let attempts = 0;
         while (count < cantidad && attempts < 10000) {
             attempts++;
             let x = Math.floor(Math.random() * this.ANCHO);
             let y = Math.floor(Math.random() * this.ALTO);
-            
+
             if (this.grid[y][x] === null) {
                 let entidad = new Clase(x, y);
                 listaDestino.push(entidad);
@@ -324,7 +330,7 @@ export class GenetixEngine {
         // 2. Destroy 80% of enemies
         const totalEnemies = this.listas.enemigos.length;
         const toDestroy = Math.floor(totalEnemies * 0.8);
-        
+
         // Shuffle and slice to pick random victims
         const shuffled = [...this.listas.enemigos].sort(() => 0.5 - Math.random());
         const victims = shuffled.slice(0, toDestroy);
@@ -359,13 +365,13 @@ export class GenetixEngine {
         // Fallout Logic (Aggressive & Fast)
         if (this.falloutTicks > 0) {
             this.falloutTicks--;
-            
+
             // 1. Enemy Damage (Severe Radiation Poisoning)
             // 70% chance per tick to damage enemies
             if (Math.random() > 0.3) {
                 this.listas.enemigos.forEach(e => {
-                     // Each enemy takes -5 HP
-                    if (Math.random() > 0.4) e.modificarVida(-5); 
+                    // Each enemy takes -5 HP
+                    if (Math.random() > 0.4) e.modificarVida(-5);
                 });
             }
 
@@ -373,7 +379,7 @@ export class GenetixEngine {
             // 30% chance per tick to damage allies (Lower than before)
             if (Math.random() > 0.7) {
                 this.listas.aliados.forEach(a => {
-                    if (Math.random() > 0.7) a.modificarVida(-1); 
+                    if (Math.random() > 0.7) a.modificarVida(-1);
                 });
             }
 
@@ -407,7 +413,7 @@ export class GenetixEngine {
 
         // 5. Limpiar Muertos (This triggers new DeathAnims)
         MisFunciones.limpiarMuertos(this.listas.enemigos, this.listas.aliados, this.grid, this.listas.efectos);
-        
+
         return evento;
     }
 
@@ -428,15 +434,15 @@ export class GenetixEngine {
             let cy = fx.y * this.CELL_SIZE + (this.CELL_SIZE / 2);
             const progress = fx.tick / fx.maxTicks; // 0.0 to 1.0
             const easeOut = 1 - Math.pow(1 - progress, 3); // Cubic ease out for smooth motion
-            
+
             ctx.save();
-            
+
             if (fx.type === 'enemigo') {
                 // Enemy: "System Purge" - Digital Brackets Expanding
                 const opacity = 1 - easeOut;
                 ctx.strokeStyle = `rgba(239, 68, 68, ${opacity})`;
                 ctx.lineWidth = 1.5;
-                
+
                 const dist = 5 + (easeOut * 10); // Expands from 5px to 15px
                 const len = 4; // Corner length
 
@@ -470,8 +476,8 @@ export class GenetixEngine {
 
                 // Core Glitch Dot (disappears very fast)
                 if (progress < 0.2) {
-                     ctx.fillStyle = `rgba(239, 68, 68, ${1 - (progress * 5)})`;
-                     ctx.fillRect(cx - 1.5, cy - 1.5, 3, 3);
+                    ctx.fillStyle = `rgba(239, 68, 68, ${1 - (progress * 5)})`;
+                    ctx.fillRect(cx - 1.5, cy - 1.5, 3, 3);
                 }
 
             } else {
@@ -483,7 +489,7 @@ export class GenetixEngine {
                 // Main Expanding Ring
                 const maxRadius = this.CELL_SIZE * 0.9;
                 const currentRadius = 3 + (easeOut * maxRadius);
-                
+
                 ctx.beginPath();
                 ctx.arc(cx, cy, currentRadius, 0, Math.PI * 2);
                 ctx.stroke();
@@ -506,7 +512,7 @@ export class GenetixEngine {
             // Calculate center of the cell for geometric drawing
             let cx = entidad.getPosX() * this.CELL_SIZE + (this.CELL_SIZE / 2);
             let cy = entidad.getPosY() * this.CELL_SIZE + (this.CELL_SIZE / 2);
-            
+
             ctx.shadowBlur = 0;
             ctx.lineJoin = 'round';
             ctx.lineCap = 'round';
@@ -515,7 +521,7 @@ export class GenetixEngine {
                 // Structure: Tech Box with diagonal support
                 const size = 16;
                 const half = size / 2;
-                
+
                 ctx.fillStyle = 'rgba(245, 158, 11, 0.15)'; // Low opacity amber fill
                 ctx.strokeStyle = '#f59e0b'; // Amber stroke
                 ctx.lineWidth = 1;
@@ -523,7 +529,7 @@ export class GenetixEngine {
                 // Main Box
                 ctx.fillRect(cx - half, cy - half, size, size);
                 ctx.strokeRect(cx - half, cy - half, size, size);
-                
+
                 // Diagonal Detail
                 ctx.beginPath();
                 ctx.moveTo(cx - half, cy + half);
@@ -534,12 +540,12 @@ export class GenetixEngine {
                 // Ally: Tactical Drone Unit (Circle with Core)
                 ctx.fillStyle = '#10b981'; // Emerald
                 ctx.strokeStyle = '#10b981';
-                
+
                 // Inner Core
                 ctx.beginPath();
                 ctx.arc(cx, cy, 3, 0, Math.PI * 2);
                 ctx.fill();
-                
+
                 // Outer Shield Ring
                 ctx.lineWidth = 1.5;
                 ctx.beginPath();
@@ -551,18 +557,18 @@ export class GenetixEngine {
                 ctx.fillStyle = '#dc2626'; // Stronger Crimson Red
                 ctx.strokeStyle = '#7f1d1d'; // Dark Blood Outline
                 ctx.lineWidth = 1;
-                
+
                 const outer = 8.5;
                 const inner = 2.5; // Very pinched center = sharp blades
-                
+
                 // Draw Sharp Star Shape
                 ctx.beginPath();
-                for(let i = 0; i < 8; i++) {
+                for (let i = 0; i < 8; i++) {
                     const radius = i % 2 === 0 ? outer : inner;
                     const angle = i * Math.PI / 4;
                     const x = cx + Math.cos(angle) * radius;
                     const y = cy + Math.sin(angle) * radius;
-                    if(i===0) ctx.moveTo(x, y);
+                    if (i === 0) ctx.moveTo(x, y);
                     else ctx.lineTo(x, y);
                 }
                 ctx.closePath();
@@ -584,27 +590,27 @@ export class GenetixEngine {
                 ctx.shadowColor = '#3b82f6';
                 ctx.shadowBlur = 4; // Soft glow to indicate energy
                 ctx.fillStyle = '#3b82f6';
-        
+
                 const gap = 2; // Space from center
                 const armLen = 5;
                 const armWidth = 3;
-        
+
                 // Top Arm
-                ctx.fillRect(cx - armWidth/2, cy - gap - armLen, armWidth, armLen);
+                ctx.fillRect(cx - armWidth / 2, cy - gap - armLen, armWidth, armLen);
                 // Bottom Arm
-                ctx.fillRect(cx - armWidth/2, cy + gap, armWidth, armLen);
+                ctx.fillRect(cx - armWidth / 2, cy + gap, armWidth, armLen);
                 // Left Arm
-                ctx.fillRect(cx - gap - armLen, cy - armWidth/2, armLen, armWidth);
+                ctx.fillRect(cx - gap - armLen, cy - armWidth / 2, armLen, armWidth);
                 // Right Arm
-                ctx.fillRect(cx + gap, cy - armWidth/2, armLen, armWidth);
-        
+                ctx.fillRect(cx + gap, cy - armWidth / 2, armLen, armWidth);
+
                 // Core (clean white dot)
                 ctx.shadowBlur = 0; // Reset shadow for sharp core
                 ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
                 ctx.arc(cx, cy, 1.5, 0, Math.PI * 2);
                 ctx.fill();
-                
+
                 // Faint Ring to unify the floating parts
                 ctx.strokeStyle = 'rgba(59, 130, 246, 0.4)';
                 ctx.lineWidth = 1;
@@ -619,14 +625,14 @@ export class GenetixEngine {
                 const barWidth = 14;
                 const hpWidth = (hp / 100) * barWidth;
                 const barY = cy - 10;
-                
+
                 // Background Bar
                 ctx.fillStyle = '#111';
-                ctx.fillRect(cx - barWidth/2, barY, barWidth, 3);
-                
+                ctx.fillRect(cx - barWidth / 2, barY, barWidth, 3);
+
                 // Health Level
                 ctx.fillStyle = hp > 50 ? '#10b981' : hp > 25 ? '#f59e0b' : '#ef4444';
-                ctx.fillRect(cx - barWidth/2, barY, hpWidth, 3);
+                ctx.fillRect(cx - barWidth / 2, barY, hpWidth, 3);
             }
         };
 
