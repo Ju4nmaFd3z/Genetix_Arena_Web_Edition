@@ -537,35 +537,45 @@ export class GenetixEngine {
                 ctx.stroke();
 
             } else if (type === 'aliado') {
-                // Ally: Tactical Drone Unit (Circle with Core)
-                ctx.fillStyle = '#10b981'; // Emerald
+                // Ally: Tactical Drone Unit (Matches Landing Page SVG exactly)
+                // SVG Ref: Outer R=42, Stroke=12. Inner R=22.
+                // Canvas Scale: Base size ~6.5px radius
+
+                const outerRadius = 6.5;
+                const strokeWidth = 1.85; // (12/42) * 6.5
+                const innerRadius = 3.4;  // (22/42) * 6.5
+
+                ctx.fillStyle = '#10b981'; // Emerald 500
                 ctx.strokeStyle = '#10b981';
 
                 // Inner Core
                 ctx.beginPath();
-                ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+                ctx.arc(cx, cy, innerRadius, 0, Math.PI * 2);
                 ctx.fill();
 
                 // Outer Shield Ring
-                ctx.lineWidth = 1.5;
+                ctx.lineWidth = strokeWidth;
                 ctx.beginPath();
-                ctx.arc(cx, cy, 6.5, 0, Math.PI * 2);
+                ctx.arc(cx, cy, outerRadius, 0, Math.PI * 2);
                 ctx.stroke();
 
             } else if (type === 'enemigo') {
-                // Enemy: Aggressive Hunter (Razor Star)
-                ctx.fillStyle = '#dc2626'; // Stronger Crimson Red
+                // Enemy: Aggressive Hunter (Matches Landing Page SVG exactly)
+                // SVG Ref: 4-pointed star. Outer R=10, Inner R=3.5.
+
+                ctx.fillStyle = '#dc2626'; // Red 600
                 ctx.strokeStyle = '#7f1d1d'; // Dark Blood Outline
                 ctx.lineWidth = 1;
 
                 const outer = 8.5;
-                const inner = 2.5; // Very pinched center = sharp blades
+                const inner = 3.0; // (3.5/10) * 8.5
 
-                // Draw Sharp Star Shape
+                // Draw Sharp 4-Pointed Star
                 ctx.beginPath();
                 for (let i = 0; i < 8; i++) {
+                    // Even indices are tips (outer), Odd indices are valleys (inner)
                     const radius = i % 2 === 0 ? outer : inner;
-                    const angle = i * Math.PI / 4;
+                    const angle = (i * Math.PI / 4) - (Math.PI / 2); // Rotate -90deg to point up
                     const x = cx + Math.cos(angle) * radius;
                     const y = cy + Math.sin(angle) * radius;
                     if (i === 0) ctx.moveTo(x, y);
@@ -576,12 +586,13 @@ export class GenetixEngine {
                 ctx.stroke();
 
                 // Core: Sharp Diamond (Deadly Eye)
-                ctx.fillStyle = '#050505'; // Black
+                const coreSize = 1.3; // (1.5/10) * 8.5
+                ctx.fillStyle = '#000000'; // Black
                 ctx.beginPath();
-                ctx.moveTo(cx, cy - 1.5);
-                ctx.lineTo(cx + 1.5, cy);
-                ctx.lineTo(cx, cy + 1.5);
-                ctx.lineTo(cx - 1.5, cy);
+                ctx.moveTo(cx, cy - coreSize);
+                ctx.lineTo(cx + coreSize, cy);
+                ctx.lineTo(cx, cy + coreSize);
+                ctx.lineTo(cx - coreSize, cy);
                 ctx.fill();
 
             } else if (type === 'curandero') {
