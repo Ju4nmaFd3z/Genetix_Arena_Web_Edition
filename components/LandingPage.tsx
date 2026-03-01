@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowRight, Github, ExternalLink, Cpu, X, ShieldAlert, Cross, Heart, Box, AlertTriangle } from 'lucide-react';
+import { ArrowRight, Github, ExternalLink, Cpu, X, ShieldAlert, Cross, Heart, Box, AlertTriangle, Volume2, VolumeX } from 'lucide-react';
 
 interface LandingPageProps {
     onStart: () => void;
+    isMuted: boolean;
+    onToggleMute: () => void;
 }
 
 type SectionType = 'none' | 'mission' | 'telemetry' | 'system';
@@ -205,7 +207,7 @@ const ChaseAnimation = () => {
     );
 };
 
-const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onStart, isMuted, onToggleMute }) => {
     const [activeSection, setActiveSection] = useState<SectionType>('none');
 
     const renderModalContent = () => {
@@ -364,10 +366,21 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                     <span className="text-xl font-bold tracking-tighter text-white">GENETIX<span className="font-thin text-gray-400">ARENA</span></span>
                     <span className="text-[10px] bg-space-border px-1 py-0.5 rounded text-gray-400 ml-2">V3.5</span>
                 </div>
-                <div className="hidden md:flex gap-8 text-sm font-medium tracking-widest uppercase cursor-pointer">
-                    <button onClick={() => setActiveSection('mission')} className={`${activeSection === 'mission' ? 'text-space-ally' : 'text-gray-400'} hover:text-white transition-colors`}>Misión</button>
-                    <button onClick={() => setActiveSection('telemetry')} className={`${activeSection === 'telemetry' ? 'text-yellow-500' : 'text-gray-400'} hover:text-white transition-colors`}>Telemetría</button>
-                    <button onClick={() => setActiveSection('system')} className={`${activeSection === 'system' ? 'text-cyan-500' : 'text-gray-400'} hover:text-white transition-colors`}>Sistema</button>
+                <div className="flex items-center gap-8">
+                    <div className="hidden md:flex gap-8 text-sm font-medium tracking-widest uppercase cursor-pointer">
+                        <button onClick={() => setActiveSection('mission')} className={`${activeSection === 'mission' ? 'text-space-ally' : 'text-gray-400'} hover:text-white transition-colors`}>Misión</button>
+                        <button onClick={() => setActiveSection('telemetry')} className={`${activeSection === 'telemetry' ? 'text-yellow-500' : 'text-gray-400'} hover:text-white transition-colors`}>Telemetría</button>
+                        <button onClick={() => setActiveSection('system')} className={`${activeSection === 'system' ? 'text-cyan-500' : 'text-gray-400'} hover:text-white transition-colors`}>Sistema</button>
+                    </div>
+
+                    {/* Audio Toggle Button */}
+                    <button
+                        onClick={onToggleMute}
+                        className={`p-2 rounded-full border border-space-border transition-all duration-300 ${isMuted ? 'text-gray-500 hover:text-white hover:border-white' : 'text-space-ally border-space-ally bg-space-ally/10'}`}
+                        title={isMuted ? "Activar Sonido" : "Silenciar"}
+                    >
+                        {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                    </button>
                 </div>
             </nav>
 

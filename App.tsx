@@ -20,14 +20,14 @@ const DEFAULT_CONFIG: GameConfig = {
 
 const App: React.FC = () => {
     const [view, setView] = useState<'landing' | 'game'>('landing');
-    const [opacity, setOpacity] = useState(1);
+    const [opacity, setOpacity] = useState(1); // State for transition opacity
     const [config, setConfig] = useState<GameConfig>(DEFAULT_CONFIG);
     const [stats, setStats] = useState<GameStats>({ allies: 0, enemies: 0, healers: 0, obstacles: 0 });
     const [logs, setLogs] = useState<LogEntry[]>([]);
 
     // States for logic
     const [isRunning, setIsRunning] = useState(false);
-    const [hasStarted, setHasStarted] = useState(false);
+    const [hasStarted, setHasStarted] = useState(false); // New state to track if game ever ran
     const [gameResult, setGameResult] = useState<string | null>(null);
     const [missionId, setMissionId] = useState<string>('00000');
 
@@ -36,6 +36,8 @@ const App: React.FC = () => {
     const [hasNukeBeenUsed, setHasNukeBeenUsed] = useState(false);
     const [targetCoordinates, setTargetCoordinates] = useState<{ x: number, y: number }[]>([]);
 
+    // Visual Fallback Tracking (Synced with engine ticks manually via loop or state)
+    // We use a simple boolean here for the overlay grain, the color tint is in canvas
     const [showFalloutGrain, setShowFalloutGrain] = useState(false);
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -43,13 +45,12 @@ const App: React.FC = () => {
     const lastTickRef = useRef<number>(0);
     const animationFrameRef = useRef<number>(0);
 
-    // [AUDIO SYSTEM]
+    // [AUDIO SYSTEM] - Referencias para el sistema de sonido
     const landingAudioRef = useRef<HTMLAudioElement | null>(null);
     const gameAudioRef = useRef<HTMLAudioElement | null>(null);
-    // Evita intentar reproducir en el montaje inicial (sin interacción del usuario)
-    const isFirstRenderRef = useRef(true);
+    const [isMuted, setIsMuted] = useState(true); // Default to muted
 
-    // Ref to track previous entity counts
+    // Ref to track previous entity counts to avoid unnecessary resets on other state changes (like Pause)
     const prevEntityCountsRef = useRef(config.entityCounts);
 
     // Logger Utility
@@ -60,19 +61,20 @@ const App: React.FC = () => {
             message: msg,
             type
         };
-        setLogs(prev => [...prev.slice(-49), newLog]);
+        setLogs(prev => [...prev.slice(-49), newLog]); // Keep last 50
     }, []);
 
-    // 1. Initialize Board
+    // 1. Initialize Board (Setup without running)
     const initializeSystem = useCallback((autoTrigger = false) => {
         engineRef.current.init(config);
         setStats(engineRef.current.getStats());
 
         if (!autoTrigger) {
-            setLogs([]);
-            setGameResult(null);
+            setLogs([]); // Clear logs only on full manual reset
+            setGameResult(null); // Clear result only on manual reset
         }
 
+        // Important: We are ready, but NOT running yet
         setHasStarted(false);
         setIsRunning(false);
         setIsExploding(false);
@@ -87,69 +89,85 @@ const App: React.FC = () => {
             addLog(`Unidades desplegadas: ${config.entityCounts.allies} Aliados, ${config.entityCounts.enemies} Enemigos.`, "info");
         }
 
+        // Force initial draw
         setTimeout(() => {
             const ctx = canvasRef.current?.getContext('2d');
             if (ctx) engineRef.current.draw(ctx, config);
         }, 50);
     }, [config, addLog]);
 
-    // 2. Start the Loop
+    // 2. Actually Start the Loop (Triggered by button)
     const runSimulation = () => {
-        setGameResult(null);
+        setGameResult(null); // Ensure result is cleared when starting
         setHasStarted(true);
         setIsRunning(true);
         addLog(">>> PROTOCOLO DE COMBATE INICIADO <<<", "combat");
     };
 
-    // Trigger Omega Protocol
+    // Trigger Omega Protocol with Animation Sequence
     const handleOmegaProtocol = () => {
         if (isExploding || hasNukeBeenUsed) return;
 
+        // 1. Start Sequence: targeting and countdown (0s)
         setIsRunning(false);
         setIsExploding(true);
         setHasNukeBeenUsed(true);
+        // Ensure targets are clear at start
         setTargetCoordinates([]);
 
         addLog("⚠ ALERTA: SECUENCIA OMEGA INICIADA. T-MINUS 3...", "system");
 
+        // Sequence Countdown
         setTimeout(() => addLog("⚠ T-MINUS 2...", "system"), 1000);
         setTimeout(() => addLog("⚠ T-MINUS 1...", "system"), 2000);
 
+        // 3. The "Boom" moment (3.0 seconds later)
         setTimeout(() => {
+            // EXECUTE PROTOCOL FIRST (Eliminates 80%)
             const msgs = engineRef.current.executeOmegaProtocol();
+
+            // CAPTURE REMAINING SURVIVORS for targeting
             const survivors = engineRef.current.listas.enemigos.map(e => ({ x: e.posX, y: e.posY }));
 
+            // Visual Update immediately at the boom
             const ctx = canvasRef.current?.getContext('2d');
             if (ctx) engineRef.current.draw(ctx, config);
 
             setStats(engineRef.current.getStats());
             setShowFalloutGrain(true);
 
+            // Log messages
             if (Array.isArray(msgs)) {
                 setTimeout(() => { if (msgs[0]) addLog(msgs[0], "combat"); }, 2000);
                 setTimeout(() => { if (msgs[1]) addLog(msgs[1], "combat"); }, 4000);
             }
 
+            // 3.5. SHOW TARGETS (Delayed slightly after the boom flash starts fading)
+            // T+5.0s (2s after boom)
             setTimeout(() => {
-                setTargetCoordinates(survivors);
+                setTargetCoordinates(survivors); // Show ALL remaining enemies
             }, 2000);
 
         }, 3000);
 
+        // 4. Resume Game (Extended wait to allow reading logs)
+        // Resume at 9s (6s after explosion)
         setTimeout(() => {
             setIsExploding(false);
-            setTargetCoordinates([]);
+            setTargetCoordinates([]); // Clear HUD
 
+            // Check win condition immediately after dust settles
             const result = engineRef.current.checkWin();
             if (result) {
                 setGameResult(result);
                 setMissionId(Math.floor(Math.random() * 90000 + 10000).toString());
                 addLog(`SIMULACIÓN FINALIZADA POST-DETONACIÓN.`, 'system');
             } else {
-                setIsRunning(true);
+                setIsRunning(true); // Resume loop
             }
         }, 9000);
 
+        // 5. Cleanup Fallout Grain
         setTimeout(() => {
             setShowFalloutGrain(false);
         }, 12000);
@@ -164,6 +182,7 @@ const App: React.FC = () => {
 
         if (!ctx) return;
 
+        // Logic Update Throttle
         if (timestamp - lastTickRef.current > config.renderSpeed) {
 
             // 1. Update Logic
@@ -188,11 +207,11 @@ const App: React.FC = () => {
             lastTickRef.current = timestamp;
         }
 
+        // Keep loop alive
         animationFrameRef.current = requestAnimationFrame(loop);
     };
 
-    // [AUDIO SYSTEM] - Inicializar pistas una sola vez
-    // NOTA: Los archivos deben estar en /public/tracks/ dentro del proyecto
+    // [AUDIO SYSTEM] - Inicializar pistas una sola vez, sin reproducción automática
     useEffect(() => {
         landingAudioRef.current = new Audio('/tracks/AudioLandingPage.mp3');
         landingAudioRef.current.loop = true;
@@ -202,35 +221,35 @@ const App: React.FC = () => {
         gameAudioRef.current.loop = true;
         gameAudioRef.current.volume = 0.4;
 
-        // Arranca la música de landing en la primera interacción del usuario
-        const startLanding = () => {
-            landingAudioRef.current?.play().catch(() => { });
-            window.removeEventListener('click', startLanding);
-            window.removeEventListener('keydown', startLanding);
-            window.removeEventListener('touchstart', startLanding);
-        };
-
-        window.addEventListener('click', startLanding);
-        window.addEventListener('keydown', startLanding);
-        window.addEventListener('touchstart', startLanding);
-
         return () => {
             landingAudioRef.current?.pause();
             gameAudioRef.current?.pause();
-            window.removeEventListener('click', startLanding);
-            window.removeEventListener('keydown', startLanding);
-            window.removeEventListener('touchstart', startLanding);
         };
     }, []);
 
-    // [AUDIO SYSTEM] - Cambiar pista al cambiar de vista
-    // El audio SIEMPRE se dispara tras una interacción del usuario (clic), por lo que el autoplay nunca queda bloqueado por el navegador.
-    useEffect(() => {
-        // Saltar el primer render: todavía no hay interacción del usuario
-        if (isFirstRenderRef.current) {
-            isFirstRenderRef.current = false;
-            return;
+    // [AUDIO SYSTEM] - Botón mute: si se activa, arranca la pista actual; si se silencia, la pausa
+    const toggleMute = () => {
+        const newMuted = !isMuted;
+        setIsMuted(newMuted);
+
+        if (newMuted) {
+            // Silenciar → pausar todo
+            landingAudioRef.current?.pause();
+            gameAudioRef.current?.pause();
+        } else {
+            // Activar → reproducir la pista correspondiente a la vista actual
+            // Este clic ES la interacción del usuario, así que el navegador lo permite
+            if (view === 'landing') {
+                landingAudioRef.current?.play().catch(() => { });
+            } else {
+                gameAudioRef.current?.play().catch(() => { });
+            }
         }
+    };
+
+    // [AUDIO SYSTEM] - Cambiar pista al cambiar de vista (solo si no está silenciado)
+    useEffect(() => {
+        if (isMuted) return;
 
         if (view === 'landing') {
             gameAudioRef.current?.pause();
@@ -241,7 +260,7 @@ const App: React.FC = () => {
             if (landingAudioRef.current) landingAudioRef.current.currentTime = 0;
             gameAudioRef.current?.play().catch(() => { });
         }
-    }, [view]);
+    }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // React to running state
     useEffect(() => {
@@ -249,27 +268,31 @@ const App: React.FC = () => {
             animationFrameRef.current = requestAnimationFrame(loop);
         } else {
             cancelAnimationFrame(animationFrameRef.current);
+            // Draw one last frame even if paused to update visuals
             const ctx = canvasRef.current?.getContext('2d');
             if (ctx) engineRef.current.draw(ctx, config);
         }
         return () => cancelAnimationFrame(animationFrameRef.current);
-    }, [isRunning, config]);
+    }, [isRunning, config]); // config dependency ensures redraw on toggle changes (health bars)
 
     // Auto-Restart on Entity Config Change
     useEffect(() => {
+        // Only trigger if entity counts have actually changed by reference
+        // This prevents the effect from running when pausing/resuming or changing view
         if (config.entityCounts === prevEntityCountsRef.current) return;
 
+        // Update ref for next comparison
         prevEntityCountsRef.current = config.entityCounts;
 
         if (view === 'game') {
             const timer = setTimeout(() => {
                 initializeSystem(true);
-            }, 500);
+            }, 500); // 500ms debounce to wait for user to finish sliding
             return () => clearTimeout(timer);
         }
     }, [config.entityCounts, view, initializeSystem]);
 
-    // Handle Reset
+    // Handle Reset (Go back to Ready state)
     const handleReset = () => {
         setIsRunning(false);
         setIsExploding(false);
@@ -286,7 +309,7 @@ const App: React.FC = () => {
             setView(targetView);
             if (callback) callback();
             setTimeout(() => setOpacity(1), 50);
-        }, 500);
+        }, 500); // 500ms fade out duration
     };
 
     const getResultStyles = () => {
@@ -323,7 +346,13 @@ const App: React.FC = () => {
 
     const renderContent = () => {
         if (view === 'landing') {
-            return <LandingPage onStart={() => switchView('game', () => initializeSystem(false))} />;
+            return (
+                <LandingPage
+                    onStart={() => switchView('game', () => initializeSystem(false))}
+                    isMuted={isMuted}
+                    onToggleMute={toggleMute}
+                />
+            );
         }
 
         const resultStyles = gameResult ? getResultStyles() : null;
@@ -337,6 +366,7 @@ const App: React.FC = () => {
                     {/* Header */}
                     <header className="h-14 md:h-16 border-b border-space-border flex items-center justify-between px-4 md:px-6 bg-space-black z-20 shrink-0">
                         <div className="flex items-center gap-4">
+                            {/* Back arrow removed */}
                             <div>
                                 <h1 className="text-lg md:text-xl font-bold tracking-tighter text-white">GENETIX<span className="font-thin text-gray-400">ARENA</span></h1>
                                 <span className="text-[10px] uppercase tracking-widest text-space-ally flex items-center gap-2">
@@ -356,7 +386,8 @@ const App: React.FC = () => {
                             relative border border-space-border shadow-2xl shadow-black bg-black w-full max-w-[95%] aspect-[3/1] 
                             ${isExploding ? 'animate-omega-sequence' : 'animate-idle-drift'}
                         `}>
-                            {/* Fallout Noise Grain */}
+                            {/* Fallout Noise Grain (Controlled by React for fading) */}
+                            {/* The Orange Tint is handled by Canvas draw() method for better perf/blending */}
                             <div className={`absolute inset-0 z-10 opacity-30 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] pointer-events-none transition-opacity duration-[8000ms] ease-out ${showFalloutGrain ? 'opacity-30' : 'opacity-0'}`}></div>
 
                             {/* Corner Accents */}
@@ -401,6 +432,7 @@ const App: React.FC = () => {
                                                     key={idx}
                                                     className="absolute w-20 h-20 flex items-center justify-center pointer-events-none"
                                                     style={{
+                                                        // IMPORTANT: Adjusted logic to point to CENTER of cell
                                                         left: `${((target.x + 0.5) / 75) * 100}%`,
                                                         top: `${((target.y + 0.5) / 25) * 100}%`,
                                                         transform: 'translate(-50%, -50%)',
@@ -577,6 +609,7 @@ const App: React.FC = () => {
                             onStart={runSimulation}
                             onSetDefaults={() => setConfig(DEFAULT_CONFIG)}
                             onAbort={() => switchView('landing', () => setIsRunning(false))}
+                            // New Props for Omega Protocol
                             isEmergencyAvailable={stats.allies === 1 && stats.enemies > 0}
                             isExploding={isExploding}
                             hasNukeBeenUsed={hasNukeBeenUsed}
@@ -617,25 +650,36 @@ const App: React.FC = () => {
                 }
 
                 @keyframes omega-sequence {
+                    /* CHARGING (0s - 3s) */
                     0% { transform: translate(0, 0); }
+                    
+                    /* Low Rumble */
                     5% { transform: translate(-1px, 1px); }
                     10% { transform: translate(1px, -1px); }
                     15% { transform: translate(-2px, 0); }
                     20% { transform: translate(2px, 0); }
                     25% { transform: translate(-1px, -1px); }
                     30% { transform: translate(1px, 1px); }
+                    
+                    /* Medium Rumble */
                     35% { transform: translate(-3px, 1px); }
                     40% { transform: translate(3px, -1px); }
                     45% { transform: translate(-3px, 0); }
                     50% { transform: translate(3px, 0); }
+                    
+                    /* High Rumble (Pre-ignition) */
                     55% { transform: translate(-5px, 2px); }
                     60% { transform: translate(5px, -2px); }
                     65% { transform: translate(-7px, 3px) rotate(-1deg); }
                     68% { transform: translate(7px, -3px) rotate(1deg); }
-                    70% { transform: translate(-9px, 5px) rotate(-2deg) scale(0.98); }
-                    72% { transform: translate(9px, -5px) rotate(2deg) scale(0.95); }
-                    74% { transform: translate(0, 0) scale(0.9); }
+                    70% { transform: translate(-9px, 5px) rotate(-2deg) scale(0.98); } /* Compress */
+                    72% { transform: translate(9px, -5px) rotate(2deg) scale(0.95); } /* Compress more */
+                    74% { transform: translate(0, 0) scale(0.9); } /* Implode point */
+
+                    /* DETONATION (3s mark = 75%) */
                     75% { transform: translate(-30px, 20px) rotate(-5deg) scale(1.1); }
+                    
+                    /* SHOCKWAVE */
                     76% { transform: translate(25px, -25px) rotate(5deg) scale(1.15); }
                     78% { transform: translate(-20px, 15px) rotate(-4deg) scale(1.1); }
                     80% { transform: translate(15px, -10px) rotate(4deg) scale(1.05); }
