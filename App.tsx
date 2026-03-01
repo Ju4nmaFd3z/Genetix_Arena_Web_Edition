@@ -192,39 +192,34 @@ const App: React.FC = () => {
     };
 
     // [AUDIO SYSTEM] - Inicializar pistas una sola vez
+    // NOTA: Los archivos deben estar en /public/tracks/ dentro del proyecto
     useEffect(() => {
-        landingAudioRef.current = new Audio('/sounds/AudioLandingPage.mp3');
+        landingAudioRef.current = new Audio('/tracks/AudioLandingPage.mp3');
         landingAudioRef.current.loop = true;
         landingAudioRef.current.volume = 0.5;
-        landingAudioRef.current.muted = true; // Arranca silenciado → autoplay permitido
 
-        gameAudioRef.current = new Audio('/sounds/AudioBatalla.mp3');
+        gameAudioRef.current = new Audio('/tracks/AudioBatalla.mp3');
         gameAudioRef.current.loop = true;
         gameAudioRef.current.volume = 0.4;
-        gameAudioRef.current.muted = true;
 
-        // Empieza a sonar (silenciado) desde el primer momento
-        landingAudioRef.current.play().catch(() => { });
-
-        // En la primera interacción, desmutea
-        const unmute = () => {
-            if (landingAudioRef.current) landingAudioRef.current.muted = false;
-            if (gameAudioRef.current) gameAudioRef.current.muted = false;
-            window.removeEventListener('click', unmute);
-            window.removeEventListener('keydown', unmute);
-            window.removeEventListener('touchstart', unmute);
+        // Arranca la música de landing en la primera interacción del usuario
+        const startLanding = () => {
+            landingAudioRef.current?.play().catch(() => {});
+            window.removeEventListener('click', startLanding);
+            window.removeEventListener('keydown', startLanding);
+            window.removeEventListener('touchstart', startLanding);
         };
 
-        window.addEventListener('click', unmute);
-        window.addEventListener('keydown', unmute);
-        window.addEventListener('touchstart', unmute);
+        window.addEventListener('click', startLanding);
+        window.addEventListener('keydown', startLanding);
+        window.addEventListener('touchstart', startLanding);
 
         return () => {
             landingAudioRef.current?.pause();
             gameAudioRef.current?.pause();
-            window.removeEventListener('click', unmute);
-            window.removeEventListener('keydown', unmute);
-            window.removeEventListener('touchstart', unmute);
+            window.removeEventListener('click', startLanding);
+            window.removeEventListener('keydown', startLanding);
+            window.removeEventListener('touchstart', startLanding);
         };
     }, []);
 
