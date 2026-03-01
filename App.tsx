@@ -184,35 +184,29 @@ const App: React.FC = () => {
 
         const engine = engineRef.current;
         const ctx = canvasRef.current?.getContext('2d');
-
         if (!ctx) return;
 
-        // Logic Update Throttle
         if (timestamp - lastTickRef.current > config.renderSpeed) {
 
-            // 1. Update Logic
             const event = engine.update();
             if (event) addLog(event, 'combat');
 
-            // 2. Check Win
             const result = engine.checkWin();
             if (result) {
                 setGameResult(result);
                 setMissionId(Math.floor(Math.random() * 90000 + 10000).toString());
                 setIsRunning(false);
                 addLog(`SIMULACIÓN FINALIZADA. RESULTADO: ${result}`, 'system');
+                engine.draw(ctx, config);
+                setStats(engine.getStats());
+                return; // ← Corta aquí, no agenda el siguiente frame
             }
 
-            // 3. Update Visuals
             engine.draw(ctx, config);
-
-            // 4. Update Stats State
             setStats(engine.getStats());
-
             lastTickRef.current = timestamp;
         }
 
-        // Keep loop alive
         animationFrameRef.current = requestAnimationFrame(loop);
     };
 
