@@ -214,7 +214,39 @@ const App: React.FC = () => {
         animationFrameRef.current = requestAnimationFrame(loop);
     };
 
+    // [AUDIO SYSTEM] - Helper: crossfade entre dos pistas
+    const crossfade = (
+        outgoing: HTMLAudioElement,
+        incoming: HTMLAudioElement,
+        targetVol: number
+    ): (() => void) => {
+        const FADE_DURATION = 1500;
+        const STEPS = 30;
+        const INTERVAL = FADE_DURATION / STEPS;
+        const outgoingStartVol = outgoing.volume;
+
+        incoming.currentTime = 0;
+        incoming.volume = 0;
+        incoming.play().catch(() => {});
+
+        let step = 0;
+        const fade = setInterval(() => {
+            step++;
+            const progress = step / STEPS;
+            outgoing.volume = Math.max(0, outgoingStartVol * (1 - progress));
+            incoming.volume = Math.min(targetVol, targetVol * progress);
+            if (step >= STEPS) {
+                clearInterval(fade);
+                outgoing.pause();
+                outgoing.volume = outgoingStartVol; // Restaurar para la próxima vez
+            }
+        }, INTERVAL);
+
+        return () => clearInterval(fade);
+    };
+
     // [AUDIO SYSTEM] - Inicializar pistas una sola vez, sin reproducción automática
+    // NOTA: Archivos en /public/tracks/
     useEffect(() => {
         landingAudioRef.current = new Audio('/tracks/LandingTrack.mp3');
         landingAudioRef.current.loop = true;
@@ -237,126 +269,77 @@ const App: React.FC = () => {
         drawAudioRef.current.volume = 0.6;
 
         return () => {
-            landingAudioRef.current?.pause();
-            gameAudioRef.current?.pause();
-            alliesWinAudioRef.current?.pause();
-            enemiesWinAudioRef.current?.pause();
-            drawAudioRef.current?.pause();
+            [landingAudioRef, gameAudioRef, alliesWinAudioRef, enemiesWinAudioRef, drawAudioRef]
+                .forEach(ref => ref.current?.pause());
         };
     }, []);
 
-    // [AUDIO SYSTEM] - Botón mute: si se activa, arranca la pista actual; si se silencia, la pausa
+    // [AUDIO SYSTEM] - Botón mute: pausa todo / reproduce la pista correcta según el estado actual
     const toggleMute = () => {
         const newMuted = !isMuted;
         setIsMuted(newMuted);
 
         if (newMuted) {
-            // Silenciar → pausar todo
-            landingAudioRef.current?.pause();
-            gameAudioRef.current?.pause();
-            alliesWinAudioRef.current?.pause();
-            enemiesWinAudioRef.current?.pause();
-            drawAudioRef.current?.pause();
+            [landingAudioRef, gameAudioRef, alliesWinAudioRef, enemiesWinAudioRef, drawAudioRef]
+                .forEach(ref => ref.current?.pause());
         } else {
-            // Activar → reproducir la pista correspondiente a la vista actual
-            // Este clic ES la interacción del usuario, así que el navegador lo permite
-            if (view === 'landing') {
-                landingAudioRef.current?.play().catch(() => { });
+            // Reanudar la pista que corresponde al estado actual
+            if (gameResult === 'ALLIES_WIN') {
+                alliesWinAudioRef.current?.play().catch(() => {});
+            } else if (gameResult === 'ENEMIES_WIN') {
+                enemiesWinAudioRef.current?.play().catch(() => {});
+            } else if (gameResult !== null) {
+                // Empate u otro resultado
+                drawAudioRef.current?.play().catch(() => {});
+            } else if (view === 'landing') {
+                landingAudioRef.current?.play().catch(() => {});
             } else {
-                gameAudioRef.current?.play().catch(() => { });
+                gameAudioRef.current?.play().catch(() => {});
             }
         }
     };
 
-    // [AUDIO SYSTEM] - Cambiar pista con fade
+    // [AUDIO SYSTEM] - Cambiar pista al cambiar de vista con crossfade
+    // isFirstRenderRef evita intentar reproducir al montar (sin interacción → navegador lo bloquea)
+    const isFirstRenderRef = useRef(true);
     useEffect(() => {
+        if (isFirstRenderRef.current) {
+            isFirstRenderRef.current = false;
+            return;
+        }
         if (isMuted) return;
-
-        const FADE_DURATION = 1500;
-        const STEPS = 30;
-        const INTERVAL = FADE_DURATION / STEPS;
 
         const incoming = view === 'landing' ? landingAudioRef.current : gameAudioRef.current;
         const outgoing = view === 'landing' ? gameAudioRef.current : landingAudioRef.current;
-        const incomingTargetVol = view === 'landing' ? 0.5 : 0.4;
+        const targetVol = view === 'landing' ? 0.5 : 0.4;
 
         if (!incoming || !outgoing) return;
+        return crossfade(outgoing, incoming, targetVol);
+    }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
 
-        // Capturar el volumen real de salida ANTES de empezar
-        const outgoingStartVol = outgoing.volume;
-
-        incoming.currentTime = 0;
-        incoming.volume = 0;
-        incoming.play().catch(() => { });
-
-        let step = 0;
-        const fade = setInterval(() => {
-            step++;
-            const progress = step / STEPS;
-
-            // Fade out desde el volumen actual, no desde 1
-            outgoing.volume = Math.max(0, outgoingStartVol * (1 - progress));
-            incoming.volume = Math.min(incomingTargetVol, incomingTargetVol * progress);
-
-            if (step >= STEPS) {
-                clearInterval(fade);
-                outgoing.pause();
-                outgoing.volume = outgoingStartVol; // Reset al volumen original
-            }
-        }, INTERVAL);
-
-        return () => clearInterval(fade);
-    }, [view]);
-
-    // [AUDIO SYSTEM] - Pista de resultado: fade in al aparecer la tarjeta, fade out al reiniciar
+    // [AUDIO SYSTEM] - Pista de resultado: crossfade al aparecer la tarjeta, limpieza al reiniciar
     useEffect(() => {
         if (isMuted) return;
 
-        const FADE_DURATION = 1500;
-        const STEPS = 30;
-        const INTERVAL = FADE_DURATION / STEPS;
-
-        if (gameResult === 'ALLIES_WIN' || gameResult === 'ENEMIES_WIN' || gameResult === 'DRAW') {
-            const resultTrack = gameResult === 'ALLIES_WIN'
-                ? alliesWinAudioRef.current
-                : gameResult === 'ENEMIES_WIN'
-                ? enemiesWinAudioRef.current
-                : drawAudioRef.current;
+        if (gameResult !== null) {
+            // Seleccionar pista según resultado
+            const resultTrack =
+                gameResult === 'ALLIES_WIN' ? alliesWinAudioRef.current :
+                gameResult === 'ENEMIES_WIN' ? enemiesWinAudioRef.current :
+                drawAudioRef.current; // Empate o cualquier otro valor
 
             if (!resultTrack || !gameAudioRef.current) return;
+            return crossfade(gameAudioRef.current, resultTrack, resultTrack.volume);
 
-            // Fade out batalla, fade in resultado
-            const battleStartVol = gameAudioRef.current.volume;
-            const resultTargetVol = resultTrack.volume;
-            resultTrack.currentTime = 0;
-            resultTrack.volume = 0;
-            resultTrack.play().catch(() => {});
-
-            let step = 0;
-            const fade = setInterval(() => {
-                step++;
-                const progress = step / STEPS;
-                if (gameAudioRef.current) {
-                    gameAudioRef.current.volume = Math.max(0, battleStartVol * (1 - progress));
-                }
-                resultTrack.volume = Math.min(resultTargetVol, resultTargetVol * progress);
-                if (step >= STEPS) {
-                    clearInterval(fade);
-                    gameAudioRef.current?.pause();
-                    if (gameAudioRef.current) gameAudioRef.current.volume = battleStartVol;
-                }
-            }, INTERVAL);
-
-            return () => clearInterval(fade);
-
-        } else if (gameResult === null) {
-            // Al reiniciar: silenciar pistas de resultado
-            alliesWinAudioRef.current?.pause();
-            enemiesWinAudioRef.current?.pause();
-            if (alliesWinAudioRef.current) alliesWinAudioRef.current.currentTime = 0;
-            if (enemiesWinAudioRef.current) enemiesWinAudioRef.current.currentTime = 0;
-            drawAudioRef.current?.pause();
-            if (drawAudioRef.current) drawAudioRef.current.currentTime = 0;
+        } else {
+            // gameResult === null → reinicio: limpiar pistas de resultado y reanudar batalla
+            [alliesWinAudioRef, enemiesWinAudioRef, drawAudioRef].forEach(ref => {
+                ref.current?.pause();
+                if (ref.current) ref.current.currentTime = 0;
+            });
+            if (view === 'game') {
+                gameAudioRef.current?.play().catch(() => {});
+            }
         }
     }, [gameResult]); // eslint-disable-line react-hooks/exhaustive-deps
 
