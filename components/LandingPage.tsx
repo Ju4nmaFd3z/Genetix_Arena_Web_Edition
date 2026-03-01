@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ArrowRight, Github, ExternalLink, Cpu, X, ShieldAlert, Cross, Heart, Box, AlertTriangle } from 'lucide-react';
 
 interface LandingPageProps {
@@ -6,6 +6,204 @@ interface LandingPageProps {
 }
 
 type SectionType = 'none' | 'mission' | 'telemetry' | 'system';
+
+const ChaseAnimation = () => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+    const [entities, setEntities] = useState<{
+        id: number;
+        type: 'ally' | 'enemy';
+        x: number;
+        y: number;
+        vx: number;
+        vy: number;
+        opacity: number;
+        scale: number;
+        hp: number;
+    }[]>([]);
+    
+    // Ref to track entities in the animation loop (avoids stale closures)
+    const entitiesRef = useRef(entities);
+    useEffect(() => {
+        entitiesRef.current = entities;
+    }, [entities]);
+
+    const requestRef = useRef<number>(0);
+    const lastTimeRef = useRef<number>(0);
+    const nextSpawnRef = useRef<number>(0);
+    const idCounter = useRef<number>(0);
+
+    // Handle resize to keep coordinate system valid
+    useEffect(() => {
+        const updateDimensions = () => {
+            if (containerRef.current) {
+                setDimensions({
+                    width: containerRef.current.offsetWidth,
+                    height: containerRef.current.offsetHeight
+                });
+            }
+        };
+        
+        window.addEventListener('resize', updateDimensions);
+        updateDimensions();
+        
+        return () => window.removeEventListener('resize', updateDimensions);
+    }, []);
+
+    const spawnSquad = (width: number, height: number) => {
+        if (width === 0 || height === 0) return;
+
+        const edge = Math.floor(Math.random() * 3); // 0: Top, 1: Right, 2: Bottom
+        
+        let startX, startY, endX, endY;
+        const padding = 50;
+
+        switch(edge) {
+            case 0: // Top -> Bottom/Left
+                startX = width * Math.random(); // Use full width
+                startY = -padding;
+                endX = width * (Math.random() * 0.5); // Move towards left-ish
+                endY = height + padding;
+                break;
+            case 1: // Right -> Left
+                startX = width + padding;
+                startY = height * Math.random();
+                endX = -padding;
+                endY = height * Math.random();
+                break;
+            case 2: // Bottom -> Top/Left
+                startX = width * Math.random(); // Use full width
+                startY = height + padding;
+                endX = width * (Math.random() * 0.5);
+                endY = -padding;
+                break;
+            default:
+                startX = 0; startY = 0; endX = 0; endY = 0;
+        }
+
+        const dx = endX - startX;
+        const dy = endY - startY;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const speed = 0.03 + Math.random() * 0.02; 
+        
+        const vx = (dx / dist) * speed;
+        const vy = (dy / dist) * speed;
+
+        const squadId = idCounter.current++;
+        
+        // Spawn Ally
+        const ally = {
+            id: squadId,
+            type: 'ally' as const,
+            x: startX,
+            y: startY,
+            vx,
+            vy,
+            opacity: 0,
+            scale: 1.1, 
+            hp: 100
+        };
+
+        // Spawn Enemy (chasing)
+        const enemy = {
+            id: squadId + 1000,
+            type: 'enemy' as const,
+            x: startX - (vx/speed) * 80, 
+            y: startY - (vy/speed) * 80,
+            vx: vx * 1.05, 
+            vy: vy * 1.05,
+            opacity: 0,
+            scale: 1.1, 
+            hp: 100
+        };
+
+        setEntities(prev => [...prev, ally, enemy]);
+    };
+
+    const animate = (time: number) => {
+        if (!lastTimeRef.current) lastTimeRef.current = time;
+        const deltaTime = time - lastTimeRef.current;
+        lastTimeRef.current = time;
+
+        // Spawn Logic (Limit to max 2 squads / 4 entities)
+        if (time > nextSpawnRef.current && dimensions.width > 0) {
+            if (entitiesRef.current.length < 4) {
+                spawnSquad(dimensions.width, dimensions.height);
+            }
+            nextSpawnRef.current = time + 4000 + Math.random() * 4000; 
+        }
+
+        setEntities(prev => prev.map(e => {
+            // Fade in/out
+            let newOpacity = e.opacity;
+            if (e.opacity < 0.8) newOpacity += 0.01; 
+            
+            // Bounds check (pixels) - Increased buffer to 200px to prevent early culling of trailing enemies
+            const isOutOfBounds = 
+                e.x < -200 || e.x > dimensions.width + 200 || 
+                e.y < -200 || e.y > dimensions.height + 200;
+            
+            return {
+                ...e,
+                x: e.x + e.vx * deltaTime,
+                y: e.y + e.vy * deltaTime,
+                opacity: isOutOfBounds ? 0 : newOpacity
+            };
+        }).filter(e => e.opacity > 0));
+
+        requestRef.current = requestAnimationFrame(animate);
+    };
+
+    useEffect(() => {
+        requestRef.current = requestAnimationFrame(animate);
+        return () => cancelAnimationFrame(requestRef.current);
+    }, [dimensions]); 
+
+    return (
+        <div 
+            ref={containerRef} 
+            className="absolute top-0 right-0 w-[40%] h-full pointer-events-none hidden md:block overflow-hidden z-0"
+            style={{
+                maskImage: 'linear-gradient(to right, transparent 0%, black 20%, black 100%)',
+                WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 20%, black 100%)'
+            }}
+        >
+            {entities.map(e => (
+                <div
+                    key={e.id}
+                    className="absolute will-change-transform blur-[0.5px]"
+                    style={{
+                        transform: `translate3d(${e.x}px, ${e.y}px, 0) scale(${e.scale})`,
+                        opacity: e.opacity,
+                    }}
+                >
+                    {/* Entity Shape */}
+                    {e.type === 'ally' ? (
+                        // Ally: Circle with Core (Matches Canvas) - Larger
+                        <div className="relative w-8 h-8 flex items-center justify-center">
+                            <div className="absolute inset-0 rounded-full border-[2px] border-emerald-500"></div>
+                            <div className="w-3 h-3 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                        </div>
+                    ) : (
+                        // Enemy: Razor Star (Matches Canvas)
+                        <div className="relative w-8 h-8 flex items-center justify-center text-red-600">
+                            <svg viewBox="0 0 24 24" className="w-full h-full drop-shadow-sm" style={{ filter: 'drop-shadow(0 0 2px rgba(220,38,38,0.6))' }}>
+                                <path 
+                                    d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z" 
+                                    fill="#dc2626" 
+                                    stroke="#7f1d1d" 
+                                    strokeWidth="1"
+                                />
+                                {/* Inner Black Diamond */}
+                                <path d="M12 10.5 L13.5 12 L12 13.5 L10.5 12 Z" fill="#000" />
+                            </svg>
+                        </div>
+                    )}
+                </div>
+            ))}
+        </div>
+    );
+};
 
 const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
     const [activeSection, setActiveSection] = useState<SectionType>('none');
@@ -174,6 +372,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
             </nav>
 
             <main className="flex-1 flex flex-col justify-center px-8 md:px-16 relative z-10">
+                {activeSection === 'none' && <ChaseAnimation />}
                 {activeSection !== 'none' ? (
                     /* Modal Overlay Content */
                     <div className="max-w-4xl w-full mx-auto md:mx-0 bg-space-panel/90 backdrop-blur-md border border-space-border p-6 md:p-10 shadow-2xl relative min-h-[400px]">

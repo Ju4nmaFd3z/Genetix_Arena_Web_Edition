@@ -24,18 +24,18 @@ const App: React.FC = () => {
     const [config, setConfig] = useState<GameConfig>(DEFAULT_CONFIG);
     const [stats, setStats] = useState<GameStats>({ allies: 0, enemies: 0, healers: 0, obstacles: 0 });
     const [logs, setLogs] = useState<LogEntry[]>([]);
-    
+
     // States for logic
     const [isRunning, setIsRunning] = useState(false);
     const [hasStarted, setHasStarted] = useState(false);
     const [gameResult, setGameResult] = useState<string | null>(null);
     const [missionId, setMissionId] = useState<string>('00000');
-    
+
     // Explosion & Nuke State
     const [isExploding, setIsExploding] = useState(false);
     const [hasNukeBeenUsed, setHasNukeBeenUsed] = useState(false);
-    const [targetCoordinates, setTargetCoordinates] = useState<{x: number, y: number}[]>([]);
-    
+    const [targetCoordinates, setTargetCoordinates] = useState<{ x: number, y: number }[]>([]);
+
     const [showFalloutGrain, setShowFalloutGrain] = useState(false);
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -48,7 +48,7 @@ const App: React.FC = () => {
     const gameAudioRef = useRef<HTMLAudioElement | null>(null);
     // Evita intentar reproducir en el montaje inicial (sin interacción del usuario)
     const isFirstRenderRef = useRef(true);
-    
+
     // Ref to track previous entity counts
     const prevEntityCountsRef = useRef(config.entityCounts);
 
@@ -56,7 +56,7 @@ const App: React.FC = () => {
     const addLog = useCallback((msg: string, type: LogEntry['type'] = 'info') => {
         const newLog: LogEntry = {
             id: Date.now(),
-            timestamp: new Date().toLocaleTimeString('es-ES', { hour12: false, hour: '2-digit', minute:'2-digit', second:'2-digit' }),
+            timestamp: new Date().toLocaleTimeString('es-ES', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }),
             message: msg,
             type
         };
@@ -67,19 +67,19 @@ const App: React.FC = () => {
     const initializeSystem = useCallback((autoTrigger = false) => {
         engineRef.current.init(config);
         setStats(engineRef.current.getStats());
-        
+
         if (!autoTrigger) {
             setLogs([]);
             setGameResult(null);
         }
-        
-        setHasStarted(false); 
+
+        setHasStarted(false);
         setIsRunning(false);
         setIsExploding(false);
         setHasNukeBeenUsed(false);
         setShowFalloutGrain(false);
         setTargetCoordinates([]);
-        
+
         if (autoTrigger) {
             addLog(`Reconfiguración detectada. ${config.entityCounts.allies} Aliados vs ${config.entityCounts.enemies} Hostiles.`, "system");
         } else {
@@ -105,11 +105,11 @@ const App: React.FC = () => {
     const handleOmegaProtocol = () => {
         if (isExploding || hasNukeBeenUsed) return;
 
-        setIsRunning(false); 
+        setIsRunning(false);
         setIsExploding(true);
         setHasNukeBeenUsed(true);
         setTargetCoordinates([]);
-        
+
         addLog("⚠ ALERTA: SECUENCIA OMEGA INICIADA. T-MINUS 3...", "system");
 
         setTimeout(() => addLog("⚠ T-MINUS 2...", "system"), 1000);
@@ -121,7 +121,7 @@ const App: React.FC = () => {
 
             const ctx = canvasRef.current?.getContext('2d');
             if (ctx) engineRef.current.draw(ctx, config);
-            
+
             setStats(engineRef.current.getStats());
             setShowFalloutGrain(true);
 
@@ -134,25 +134,25 @@ const App: React.FC = () => {
                 setTargetCoordinates(survivors);
             }, 2000);
 
-        }, 3000); 
+        }, 3000);
 
         setTimeout(() => {
             setIsExploding(false);
             setTargetCoordinates([]);
-            
+
             const result = engineRef.current.checkWin();
             if (result) {
                 setGameResult(result);
                 setMissionId(Math.floor(Math.random() * 90000 + 10000).toString());
                 addLog(`SIMULACIÓN FINALIZADA POST-DETONACIÓN.`, 'system');
             } else {
-                 setIsRunning(true);
+                setIsRunning(true);
             }
         }, 9000);
 
         setTimeout(() => {
             setShowFalloutGrain(false);
-        }, 12000); 
+        }, 12000);
     };
 
     // The Game Loop
@@ -165,7 +165,7 @@ const App: React.FC = () => {
         if (!ctx) return;
 
         if (timestamp - lastTickRef.current > config.renderSpeed) {
-            
+
             // 1. Update Logic
             const event = engine.update();
             if (event) addLog(event, 'combat');
@@ -181,7 +181,7 @@ const App: React.FC = () => {
 
             // 3. Update Visuals
             engine.draw(ctx, config);
-            
+
             // 4. Update Stats State
             setStats(engine.getStats());
 
@@ -193,17 +193,38 @@ const App: React.FC = () => {
 
     // [AUDIO SYSTEM] - Inicializar pistas una sola vez
     useEffect(() => {
-        landingAudioRef.current = new Audio('tracks/AudioLandingPage.mp3');
+        landingAudioRef.current = new Audio('/sounds/AudioLandingPage.mp3');
         landingAudioRef.current.loop = true;
         landingAudioRef.current.volume = 0.5;
+        landingAudioRef.current.muted = true; // Arranca silenciado → autoplay permitido
 
-        gameAudioRef.current = new Audio('tracks/AudioBatalla.mp3');
+        gameAudioRef.current = new Audio('/sounds/AudioBatalla.mp3');
         gameAudioRef.current.loop = true;
         gameAudioRef.current.volume = 0.4;
+        gameAudioRef.current.muted = true;
+
+        // Empieza a sonar (silenciado) desde el primer momento
+        landingAudioRef.current.play().catch(() => { });
+
+        // En la primera interacción, desmutea
+        const unmute = () => {
+            if (landingAudioRef.current) landingAudioRef.current.muted = false;
+            if (gameAudioRef.current) gameAudioRef.current.muted = false;
+            window.removeEventListener('click', unmute);
+            window.removeEventListener('keydown', unmute);
+            window.removeEventListener('touchstart', unmute);
+        };
+
+        window.addEventListener('click', unmute);
+        window.addEventListener('keydown', unmute);
+        window.addEventListener('touchstart', unmute);
 
         return () => {
             landingAudioRef.current?.pause();
             gameAudioRef.current?.pause();
+            window.removeEventListener('click', unmute);
+            window.removeEventListener('keydown', unmute);
+            window.removeEventListener('touchstart', unmute);
         };
     }, []);
 
@@ -219,11 +240,11 @@ const App: React.FC = () => {
         if (view === 'landing') {
             gameAudioRef.current?.pause();
             if (gameAudioRef.current) gameAudioRef.current.currentTime = 0;
-            landingAudioRef.current?.play().catch(() => {});
+            landingAudioRef.current?.play().catch(() => { });
         } else {
             landingAudioRef.current?.pause();
             if (landingAudioRef.current) landingAudioRef.current.currentTime = 0;
-            gameAudioRef.current?.play().catch(() => {});
+            gameAudioRef.current?.play().catch(() => { });
         }
     }, [view]);
 
@@ -242,7 +263,7 @@ const App: React.FC = () => {
     // Auto-Restart on Entity Config Change
     useEffect(() => {
         if (config.entityCounts === prevEntityCountsRef.current) return;
-        
+
         prevEntityCountsRef.current = config.entityCounts;
 
         if (view === 'game') {
@@ -314,10 +335,10 @@ const App: React.FC = () => {
 
         return (
             <div className="h-screen bg-space-black text-space-text font-sans flex flex-col md:flex-row overflow-hidden">
-                
+
                 {/* LEFT: Game Viewport */}
                 <div className="flex-1 flex flex-col h-full relative order-2 md:order-1">
-                    
+
                     {/* Header */}
                     <header className="h-14 md:h-16 border-b border-space-border flex items-center justify-between px-4 md:px-6 bg-space-black z-20 shrink-0">
                         <div className="flex items-center gap-4">
@@ -335,7 +356,7 @@ const App: React.FC = () => {
                     <div className="flex-1 bg-space-dark relative flex items-center justify-center p-2 md:p-4 overflow-hidden">
                         {/* Decorative Grid Background */}
                         <div className="absolute inset-0 bg-grid-pattern bg-[length:40px_40px] opacity-10 pointer-events-none"></div>
-                        
+
                         <div className={`
                             relative border border-space-border shadow-2xl shadow-black bg-black w-full max-w-[95%] aspect-[3/1] 
                             ${isExploding ? 'animate-omega-sequence' : 'animate-idle-drift'}
@@ -348,10 +369,10 @@ const App: React.FC = () => {
                             <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-space-ally"></div>
                             <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-space-ally"></div>
                             <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-space-ally"></div>
-                            
-                            <canvas 
-                                ref={canvasRef} 
-                                width={1500} 
+
+                            <canvas
+                                ref={canvasRef}
+                                width={1500}
                                 height={500}
                                 className={`w-full h-full object-contain block transition-all duration-1000 ${showFalloutGrain ? 'sepia-[.2] contrast-110' : ''}`}
                             />
@@ -361,10 +382,10 @@ const App: React.FC = () => {
                                 <div className="absolute inset-0 z-40 overflow-hidden pointer-events-none">
                                     {/* 1. Pre-Nuke: Red Siren Tint (0-3s) */}
                                     <div className="absolute inset-0 bg-red-600/20 animate-pulse mix-blend-overlay"></div>
-                                    
+
                                     {/* 2. The Flash (3s-6s) */}
                                     <div className="absolute inset-0 bg-white animate-nuke-flash mix-blend-hard-light"></div>
-                                    
+
                                     {/* 3. Shockwave Ring (3s) */}
                                     <div className="absolute inset-0 flex items-center justify-center">
                                         <div className="w-[50px] h-[50px] rounded-full border-[50px] border-white animate-shockwave opacity-80"></div>
@@ -375,36 +396,36 @@ const App: React.FC = () => {
                                         <div className="absolute inset-0 z-50 animate-hud-cycle text-green-500 font-mono">
                                             {/* Green Night Vision Filter */}
                                             <div className="absolute inset-0 bg-green-900/10 mix-blend-overlay pointer-events-none"></div>
-                                            
+
                                             {/* Scanlines for HUD */}
                                             <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(0,255,0,0.06),rgba(0,255,0,0.02),rgba(0,0,0,0.06))] bg-[length:100%_2px,3px_100%] pointer-events-none"></div>
 
                                             {/* Reticles */}
                                             {targetCoordinates.map((target, idx) => (
-                                                <div 
+                                                <div
                                                     key={idx}
                                                     className="absolute w-20 h-20 flex items-center justify-center pointer-events-none"
-                                                    style={{ 
-                                                        left: `${((target.x + 0.5) / 75) * 100}%`, 
+                                                    style={{
+                                                        left: `${((target.x + 0.5) / 75) * 100}%`,
                                                         top: `${((target.y + 0.5) / 25) * 100}%`,
                                                         transform: 'translate(-50%, -50%)',
                                                     }}
                                                 >
                                                     {/* Outer Ring Animation - Scale In */}
-                                                    <div 
-                                                        className="absolute w-full h-full border border-green-500/20 rounded-full animate-[scale-in_0.3s_ease-out_forwards]" 
+                                                    <div
+                                                        className="absolute w-full h-full border border-green-500/20 rounded-full animate-[scale-in_0.3s_ease-out_forwards]"
                                                         style={{ animationDelay: `${idx * 0.05}s` }}
                                                     ></div>
-                                                    
+
                                                     {/* Spinning Dashed Ring (Slow) */}
                                                     <div className="absolute w-14 h-14 border border-dashed border-green-400/60 rounded-full animate-[spin_6s_linear_infinite]"></div>
-                                                    
+
                                                     {/* Inner Lock Ring (Rotating counter-clockwise Fast) */}
                                                     <div className="absolute w-10 h-10 border-t-2 border-b-2 border-green-500 rounded-full animate-[spin_3s_linear_infinite_reverse] shadow-[0_0_10px_rgba(34,197,94,0.6)]"></div>
-                                                    
+
                                                     {/* Center Target Point */}
                                                     <div className="absolute w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,1)]"></div>
-                                                    
+
                                                     {/* Crosshair Lines */}
                                                     <div className="absolute w-full h-[1px] bg-green-500/20"></div>
                                                     <div className="absolute h-full w-[1px] bg-green-500/20"></div>
@@ -440,7 +461,7 @@ const App: React.FC = () => {
                                             </div>
                                         </div>
                                     )}
-                                    
+
                                     {/* 5. Warning Text - Initial Phase */}
                                     {targetCoordinates.length === 0 && (
                                         <div className="absolute top-10 left-0 right-0 flex justify-center animate-text-lifecycle">
@@ -478,7 +499,7 @@ const App: React.FC = () => {
                                         <div className="mb-6">
                                             {resultStyles.icon}
                                         </div>
-                                        
+
                                         <h2 className={`text-3xl md:text-4xl font-bold tracking-tighter ${resultStyles.textColor} mb-2 drop-shadow-md`}>
                                             {resultStyles.title}
                                         </h2>
@@ -512,7 +533,7 @@ const App: React.FC = () => {
 
                 {/* RIGHT: Dashboard Sidebar */}
                 <aside className="w-full md:w-80 border-t md:border-t-0 md:border-l border-space-border bg-space-black flex flex-col h-[35vh] md:h-full z-30 order-1 md:order-2 shrink-0">
-                    
+
                     {/* Stats Header */}
                     <div className="p-4 border-b border-space-border bg-space-panel">
                         <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 block mb-3 text-center md:text-left">TELEMETRÍA EN VIVO</span>
@@ -520,28 +541,28 @@ const App: React.FC = () => {
                             {/* Stat Card */}
                             <div className="bg-space-dark p-2 md:p-3 border border-space-border/50 flex flex-col justify-center">
                                 <div className="text-space-ally flex items-center gap-1.5 mb-1 text-[10px] md:text-xs font-bold truncate">
-                                    <ShieldAlert size={12} className="shrink-0"/> ALIADOS
+                                    <ShieldAlert size={12} className="shrink-0" /> ALIADOS
                                 </div>
                                 <div className="text-xl md:text-2xl font-mono text-white leading-none">{stats.allies}</div>
                             </div>
 
                             <div className="bg-space-dark p-2 md:p-3 border border-space-border/50 flex flex-col justify-center">
                                 <div className="text-space-enemy flex items-center gap-1.5 mb-1 text-[10px] md:text-xs font-bold truncate">
-                                    <Cross size={12} className="rotate-45 shrink-0"/> ENEMIGOS
+                                    <Cross size={12} className="rotate-45 shrink-0" /> ENEMIGOS
                                 </div>
                                 <div className="text-xl md:text-2xl font-mono text-white leading-none">{stats.enemies}</div>
                             </div>
 
                             <div className="bg-space-dark p-2 md:p-3 border border-space-border/50 flex flex-col justify-center">
                                 <div className="text-space-healer flex items-center gap-1.5 mb-1 text-[10px] md:text-xs font-bold truncate">
-                                    <Heart size={12} className="shrink-0"/> CURANDEROS
+                                    <Heart size={12} className="shrink-0" /> CURANDEROS
                                 </div>
                                 <div className="text-xl md:text-2xl font-mono text-white leading-none">{stats.healers}</div>
                             </div>
 
                             <div className="bg-space-dark p-2 md:p-3 border border-space-border/50 flex flex-col justify-center">
                                 <div className="text-space-obstacle flex items-center gap-1.5 mb-1 text-[10px] md:text-xs font-bold truncate">
-                                    <Box size={12} className="shrink-0"/> OBSTÁCULOS
+                                    <Box size={12} className="shrink-0" /> OBSTÁCULOS
                                 </div>
                                 <div className="text-xl md:text-2xl font-mono text-white leading-none">{stats.obstacles}</div>
                             </div>
@@ -550,12 +571,12 @@ const App: React.FC = () => {
 
                     {/* Controls */}
                     <div className="flex-1 overflow-y-auto">
-                        <ControlPanel 
-                            config={config} 
-                            isRunning={isRunning} 
+                        <ControlPanel
+                            config={config}
+                            isRunning={isRunning}
                             hasStarted={hasStarted}
                             isGameOver={!!gameResult}
-                            setConfig={setConfig} 
+                            setConfig={setConfig}
                             onTogglePause={() => setIsRunning(!isRunning)}
                             onReset={handleReset}
                             onStart={runSimulation}
@@ -573,7 +594,7 @@ const App: React.FC = () => {
     };
 
     return (
-        <div 
+        <div
             className="w-full h-full bg-space-black transition-opacity duration-500 ease-in-out"
             style={{ opacity: opacity }}
         >
