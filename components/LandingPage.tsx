@@ -21,7 +21,7 @@ const ChaseAnimation = () => {
         scale: number;
         hp: number;
     }[]>([]);
-    
+
     // Ref to track entities in the animation loop (avoids stale closures)
     const entitiesRef = useRef(entities);
     useEffect(() => {
@@ -43,10 +43,10 @@ const ChaseAnimation = () => {
                 });
             }
         };
-        
+
         window.addEventListener('resize', updateDimensions);
         updateDimensions();
-        
+
         return () => window.removeEventListener('resize', updateDimensions);
     }, []);
 
@@ -54,11 +54,11 @@ const ChaseAnimation = () => {
         if (width === 0 || height === 0) return;
 
         const edge = Math.floor(Math.random() * 3); // 0: Top, 1: Right, 2: Bottom
-        
+
         let startX, startY, endX, endY;
         const padding = 50;
 
-        switch(edge) {
+        switch (edge) {
             case 0: // Top -> Bottom/Left
                 startX = width * Math.random(); // Use full width
                 startY = -padding;
@@ -83,14 +83,14 @@ const ChaseAnimation = () => {
 
         const dx = endX - startX;
         const dy = endY - startY;
-        const dist = Math.sqrt(dx*dx + dy*dy);
-        const speed = 0.03 + Math.random() * 0.02; 
-        
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const speed = 0.03 + Math.random() * 0.02;
+
         const vx = (dx / dist) * speed;
         const vy = (dy / dist) * speed;
 
         const squadId = idCounter.current++;
-        
+
         // Spawn Ally
         const ally = {
             id: squadId,
@@ -100,7 +100,7 @@ const ChaseAnimation = () => {
             vx,
             vy,
             opacity: 0,
-            scale: 1.1, 
+            scale: 1.1,
             hp: 100
         };
 
@@ -108,12 +108,12 @@ const ChaseAnimation = () => {
         const enemy = {
             id: squadId + 1000,
             type: 'enemy' as const,
-            x: startX - (vx/speed) * 80, 
-            y: startY - (vy/speed) * 80,
-            vx: vx * 1.05, 
+            x: startX - (vx / speed) * 80,
+            y: startY - (vy / speed) * 80,
+            vx: vx * 1.05,
             vy: vy * 1.05,
             opacity: 0,
-            scale: 1.1, 
+            scale: 1.1,
             hp: 100
         };
 
@@ -130,19 +130,19 @@ const ChaseAnimation = () => {
             if (entitiesRef.current.length < 4) {
                 spawnSquad(dimensions.width, dimensions.height);
             }
-            nextSpawnRef.current = time + 4000 + Math.random() * 4000; 
+            nextSpawnRef.current = time + 4000 + Math.random() * 4000;
         }
 
         setEntities(prev => prev.map(e => {
             // Fade in/out
             let newOpacity = e.opacity;
-            if (e.opacity < 0.8) newOpacity += 0.01; 
-            
+            if (e.opacity < 0.8) newOpacity += 0.01;
+
             // Bounds check (pixels) - Increased buffer to 200px to prevent early culling of trailing enemies
-            const isOutOfBounds = 
-                e.x < -200 || e.x > dimensions.width + 200 || 
+            const isOutOfBounds =
+                e.x < -200 || e.x > dimensions.width + 200 ||
                 e.y < -200 || e.y > dimensions.height + 200;
-            
+
             return {
                 ...e,
                 x: e.x + e.vx * deltaTime,
@@ -157,11 +157,11 @@ const ChaseAnimation = () => {
     useEffect(() => {
         requestRef.current = requestAnimationFrame(animate);
         return () => cancelAnimationFrame(requestRef.current);
-    }, [dimensions]); 
+    }, [dimensions]);
 
     return (
-        <div 
-            ref={containerRef} 
+        <div
+            ref={containerRef}
             className="absolute top-0 right-0 w-[40%] h-full pointer-events-none hidden md:block overflow-hidden z-0"
             style={{
                 maskImage: 'linear-gradient(to right, transparent 0%, black 20%, black 100%)',
@@ -188,10 +188,10 @@ const ChaseAnimation = () => {
                         // Enemy: Razor Star (Matches Canvas)
                         <div className="relative w-8 h-8 flex items-center justify-center text-red-600">
                             <svg viewBox="0 0 24 24" className="w-full h-full drop-shadow-sm" style={{ filter: 'drop-shadow(0 0 2px rgba(220,38,38,0.6))' }}>
-                                <path 
-                                    d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z" 
-                                    fill="#dc2626" 
-                                    stroke="#7f1d1d" 
+                                <path
+                                    d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z"
+                                    fill="#dc2626"
+                                    stroke="#7f1d1d"
                                     strokeWidth="1"
                                 />
                                 {/* Inner Black Diamond */}
@@ -260,7 +260,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                             <h3 className="text-xl font-bold text-white mb-1 font-sans">ANÁLISIS DE EQUILIBRIO</h3>
                             <p className="text-sm text-gray-400 font-sans">Informe de Desigualdad Intencional v3.5</p>
                         </div>
-                        
+
                         <div className="bg-space-black p-4 border border-space-border text-xs leading-relaxed text-gray-300">
                             <div className="flex items-start gap-3 mb-4">
                                 <AlertTriangle className="text-yellow-500 shrink-0" size={20} />
@@ -270,12 +270,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                             </div>
 
                             <p className="mb-4 text-yellow-500 uppercase tracking-widest border-b border-space-border pb-1">FACTORES TÉCNICOS DETERMINANTES</p>
-                            
+
                             <ul className="space-y-4 list-disc pl-4 marker:text-space-border">
                                 <li>
                                     <strong className="text-white block mb-1">ASIMETRÍA DE INICIATIVA</strong>
-                                    Hostiles: Persecución proactiva (Rango &infin;).<br/>
-                                    Aliados: Respuesta reactiva (Rango 3 celdas).<br/>
+                                    Hostiles: Persecución proactiva (Rango &infin;).<br />
+                                    Aliados: Respuesta reactiva (Rango 3 celdas).<br />
                                     <span className="text-gray-500 italic">Resultado: Los enemigos siempre golpean primero.</span>
                                 </li>
                                 <li>
@@ -286,8 +286,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                                 <li>
                                     <strong className="text-white block mb-1">DIFERENCIAL DE DAÑO POR COLISIÓN</strong>
                                     <span className="grid grid-cols-2 gap-2 mt-2 max-w-xs text-center font-bold">
-                                        <span className="bg-space-dark p-2 border border-space-enemy/30 text-space-enemy block">HOSTIL RECIBE<br/>-25 HP</span>
-                                        <span className="bg-space-dark p-2 border border-space-ally/30 text-space-ally block">ALIADO RECIBE<br/>-35 HP</span>
+                                        <span className="bg-space-dark p-2 border border-space-enemy/30 text-space-enemy block">HOSTIL RECIBE<br />-25 HP</span>
+                                        <span className="bg-space-dark p-2 border border-space-ally/30 text-space-ally block">ALIADO RECIBE<br />-35 HP</span>
                                     </span>
                                 </li>
                             </ul>
@@ -376,7 +376,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                 {activeSection !== 'none' ? (
                     /* Modal Overlay Content */
                     <div className="max-w-4xl w-full mx-auto md:mx-0 bg-space-panel/90 backdrop-blur-md border border-space-border p-6 md:p-10 shadow-2xl relative min-h-[400px]">
-                        <button 
+                        <button
                             onClick={() => setActiveSection('none')}
                             className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"
                         >
@@ -397,7 +397,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                         </p>
 
                         <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
-                            <button 
+                            <button
                                 onClick={onStart}
                                 className="group bg-white text-black px-10 py-4 font-bold tracking-widest uppercase hover:bg-gray-200 transition-all flex items-center gap-3 w-full md:w-auto justify-center"
                             >
@@ -406,20 +406,20 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart }) => {
                             </button>
 
                             <div className="flex gap-4 w-full md:w-auto">
-                                <a href="https://github.com/Ju4nmaFd3z/Genetix_Arena.git" target="_blank" rel="noreferrer" 
-                                   className="flex-1 md:flex-none p-4 border border-space-border hover:border-white transition-colors text-gray-400 hover:text-white flex justify-center">
+                                <a href="https://github.com/Ju4nmaFd3z/Genetix_Arena.git" target="_blank" rel="noreferrer"
+                                    className="flex-1 md:flex-none p-4 border border-space-border hover:border-white transition-colors text-gray-400 hover:text-white flex justify-center">
                                     <span className="flex items-center gap-2 text-xs uppercase tracking-wider">
                                         <Github size={16} /> Java Repo
                                     </span>
                                 </a>
                                 <a href="https://github.com/Ju4nmaFd3z/Genetix_Arena_Web_Edition.git" target="_blank" rel="noreferrer"
-                                   className="flex-1 md:flex-none p-4 border border-space-border hover:border-white transition-colors text-gray-400 hover:text-white flex justify-center">
+                                    className="flex-1 md:flex-none p-4 border border-space-border hover:border-white transition-colors text-gray-400 hover:text-white flex justify-center">
                                     <span className="flex items-center gap-2 text-xs uppercase tracking-wider">
                                         <Github size={16} /> Web Repo
                                     </span>
                                 </a>
-                                 <a href="https://juanma-dev-portfolio.vercel.app/" target="_blank" rel="noreferrer"
-                                   className="flex-1 md:flex-none p-4 border border-space-border hover:border-space-ally transition-colors text-gray-400 hover:text-space-ally flex justify-center">
+                                <a href="https://juanma-dev-portfolio.vercel.app/" target="_blank" rel="noreferrer"
+                                    className="flex-1 md:flex-none p-4 border border-space-border hover:border-space-ally transition-colors text-gray-400 hover:text-space-ally flex justify-center">
                                     <span className="flex items-center gap-2 text-xs uppercase tracking-wider">
                                         <ExternalLink size={16} /> Portfolio
                                     </span>

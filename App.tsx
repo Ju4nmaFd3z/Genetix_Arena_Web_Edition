@@ -204,7 +204,7 @@ const App: React.FC = () => {
 
         // Arranca la música de landing en la primera interacción del usuario
         const startLanding = () => {
-            landingAudioRef.current?.play().catch(() => {});
+            landingAudioRef.current?.play().catch(() => { });
             window.removeEventListener('click', startLanding);
             window.removeEventListener('keydown', startLanding);
             window.removeEventListener('touchstart', startLanding);

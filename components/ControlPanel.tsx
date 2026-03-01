@@ -20,17 +20,17 @@ interface ControlPanelProps {
 }
 
 const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStarted, isGameOver, setConfig, onTogglePause, onReset, onStart, onSetDefaults, onAbort, isEmergencyAvailable, isExploding, hasNukeBeenUsed, onTriggerEmergency }) => {
-    
+
     // Local state for sliders to support update-on-release
     const [localCounts, setLocalCounts] = useState(config.entityCounts);
-    
+
     // State for invalid interaction feedback (shaking the box or inputs)
     const [isShaking, setIsShaking] = useState(false);
     const [showDenied, setShowDenied] = useState(false);
-    
+
     // New state for locked controls feedback
     const [lockedControlId, setLockedControlId] = useState<string | null>(null);
-    
+
     // Track which input field is currently erroring
     const [errorField, setErrorField] = useState<string | null>(null);
 
@@ -45,13 +45,13 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStart
         // Validation: Allies and Enemies cannot be 0
         if ((key === 'allies' || key === 'enemies') && value < 1) {
             finalValue = 1;
-            
+
             // Trigger visual feedback for this specific field
             setErrorField(key);
             setTimeout(() => setErrorField(null), 500);
         } else {
             // Cap maximum
-             finalValue = Math.max(0, Math.min(200, value));
+            finalValue = Math.max(0, Math.min(200, value));
         }
 
         setLocalCounts(prev => ({
@@ -63,10 +63,10 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStart
     // Commit changes to main config only on mouse/touch release
     const commitEntityChanges = () => {
         if (isExploding) {
-             triggerLockedFeedback('sliders');
-             // Revert local change to match actual config
-             setLocalCounts(config.entityCounts);
-             return;
+            triggerLockedFeedback('sliders');
+            // Revert local change to match actual config
+            setLocalCounts(config.entityCounts);
+            return;
         }
         setConfig(prev => ({
             ...prev,
@@ -174,20 +174,20 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStart
                     50% { color: #ef4444; }
                 }
             `}</style>
-            
+
             {/* Main Controls */}
             <div className="flex flex-col gap-2">
                 <div className="text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-1">COMANDOS PRINCIPALES</div>
-                
+
                 {!hasStarted ? (
-                    <button 
+                    <button
                         onClick={onStart}
                         className="w-full flex items-center justify-center gap-2 p-4 bg-white text-black hover:bg-gray-200 font-bold uppercase tracking-wider text-xs transition-all animate-pulse"
                     >
                         <Power size={16} /> INICIAR SIMULACIÓN
                     </button>
                 ) : isGameOver ? (
-                    <button 
+                    <button
                         onClick={onReset}
                         className="w-full flex items-center justify-center gap-2 p-4 bg-white text-black hover:bg-gray-200 font-bold uppercase tracking-wider text-xs transition-all"
                     >
@@ -195,25 +195,23 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStart
                     </button>
                 ) : (
                     <div className="grid grid-cols-2 gap-2">
-                        <button 
+                        <button
                             onClick={() => handleProtectedAction('pause', onTogglePause)}
-                            className={`flex items-center justify-center gap-2 p-3 font-bold uppercase tracking-wider text-xs transition-all ${
-                                lockedControlId === 'pause' ? 'bg-red-900 border-red-500 text-white animate-shake' :
-                                isRunning 
-                                ? 'bg-transparent border border-space-border text-yellow-500 hover:border-yellow-500' 
-                                : 'bg-white text-black hover:bg-gray-200'
-                            }`}
+                            className={`flex items-center justify-center gap-2 p-3 font-bold uppercase tracking-wider text-xs transition-all ${lockedControlId === 'pause' ? 'bg-red-900 border-red-500 text-white animate-shake' :
+                                isRunning
+                                    ? 'bg-transparent border border-space-border text-yellow-500 hover:border-yellow-500'
+                                    : 'bg-white text-black hover:bg-gray-200'
+                                }`}
                         >
-                            {lockedControlId === 'pause' ? <><Lock size={14}/> LOCKED</> : isRunning ? <><Pause size={14} /> PAUSA</> : <><Play size={14} /> REANUDAR</>}
+                            {lockedControlId === 'pause' ? <><Lock size={14} /> LOCKED</> : isRunning ? <><Pause size={14} /> PAUSA</> : <><Play size={14} /> REANUDAR</>}
                         </button>
-                        <button 
+                        <button
                             onClick={() => handleProtectedAction('reset', onReset)}
-                            className={`flex items-center justify-center gap-2 p-3 border font-bold uppercase tracking-wider text-xs transition-colors ${
-                                lockedControlId === 'reset' ? 'bg-red-900 border-red-500 text-white animate-shake' :
+                            className={`flex items-center justify-center gap-2 p-3 border font-bold uppercase tracking-wider text-xs transition-colors ${lockedControlId === 'reset' ? 'bg-red-900 border-red-500 text-white animate-shake' :
                                 'bg-transparent border-space-border text-white hover:border-red-500 hover:text-red-500'
-                            }`}
+                                }`}
                         >
-                             {lockedControlId === 'reset' ? <><Lock size={14}/> LOCKED</> : <><RotateCcw size={14} /> REINICIAR</>}
+                            {lockedControlId === 'reset' ? <><Lock size={14} /> LOCKED</> : <><RotateCcw size={14} /> REINICIAR</>}
                         </button>
                     </div>
                 )}
@@ -221,11 +219,11 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStart
 
             {/* Entity Config */}
             <div>
-                 <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-4 border-b border-space-border pb-2">
+                <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-4 border-b border-space-border pb-2">
                     <Sliders size={12} />
                     <span>PARÁMETROS {lockedControlId === 'sliders' ? <span className="text-red-500 animate-pulse font-bold ml-2">LOCKED</span> : '(REQ. REINICIO)'}</span>
                 </div>
-                
+
                 <div className={`space-y-4 ${lockedControlId === 'sliders' ? 'opacity-50 animate-shake' : ''}`}>
                     {[
                         { label: 'ALIADOS', key: 'allies', color: 'text-space-ally' },
@@ -233,8 +231,8 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStart
                         { label: 'CURANDEROS', key: 'healers', color: 'text-space-healer' },
                         { label: 'OBSTÁCULOS', key: 'obstacles', color: 'text-space-obstacle' }
                     ].map((item) => {
-                         const isError = errorField === item.key;
-                         return (
+                        const isError = errorField === item.key;
+                        return (
                             <div key={item.key} className={`flex flex-col gap-3 transition-colors duration-200 ${isError ? 'animate-shake' : ''}`}>
                                 <div className="flex justify-between items-center">
                                     <span className={`${isError ? 'text-red-500' : item.color} font-bold text-xs transition-colors`}>{item.label}</span>
@@ -242,18 +240,17 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStart
                                         {localCounts[item.key as keyof typeof config.entityCounts]}
                                     </span>
                                 </div>
-                                <input 
-                                    type="range" 
-                                    min="0" 
-                                    max="150" 
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="150"
                                     disabled={isRunning}
-                                    value={localCounts[item.key as keyof typeof config.entityCounts]} 
+                                    value={localCounts[item.key as keyof typeof config.entityCounts]}
                                     onChange={(e) => handleLocalChange(item.key as keyof typeof config.entityCounts, parseInt(e.target.value))}
                                     onMouseUp={commitEntityChanges}
                                     onTouchEnd={commitEntityChanges}
-                                    className={`w-full h-1 rounded-lg appearance-none cursor-pointer ${
-                                        isRunning ? 'bg-gray-800' : isError ? 'bg-red-900' : 'bg-space-border'
-                                    }`}
+                                    className={`w-full h-1 rounded-lg appearance-none cursor-pointer ${isRunning ? 'bg-gray-800' : isError ? 'bg-red-900' : 'bg-space-border'
+                                        }`}
                                 />
                             </div>
                         );
@@ -262,43 +259,41 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStart
             </div>
 
             {/* Simulation Options */}
-             <div>
-                 <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-4 border-b border-space-border pb-2">
+            <div>
+                <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-4 border-b border-space-border pb-2">
                     <Activity size={12} />
                     <span>OPCIONES DE EJECUCIÓN</span>
                 </div>
-                
+
                 <div className="space-y-4">
-                     <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-3">
                         <div className="flex justify-between items-center">
                             <span className="text-white text-xs">VELOCIDAD SIM</span>
                             <span className="text-gray-400 text-xs">{config.renderSpeed}ms</span>
                         </div>
-                        <input 
-                            type="range" 
-                            min="10" 
-                            max="500" 
+                        <input
+                            type="range"
+                            min="10"
+                            max="500"
                             step="10"
-                            value={config.renderSpeed} 
-                            onChange={(e) => setConfig({...config, renderSpeed: parseInt(e.target.value)})}
+                            value={config.renderSpeed}
+                            onChange={(e) => setConfig({ ...config, renderSpeed: parseInt(e.target.value) })}
                             className="w-full h-1 bg-space-border rounded-lg appearance-none cursor-pointer"
                         />
                     </div>
 
                     <div className="flex items-center justify-between">
-                         <span className="flex items-center gap-2 text-white text-xs">
-                             <Eye size={14} /> INTERFAZ HUD (SALUD)
-                         </span>
-                         <button 
-                            onClick={() => setConfig({...config, showHealthBars: !config.showHealthBars})}
-                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none ${
-                                config.showHealthBars ? 'bg-white' : 'bg-space-dark border border-space-border'
-                            }`}
+                        <span className="flex items-center gap-2 text-white text-xs">
+                            <Eye size={14} /> INTERFAZ HUD (SALUD)
+                        </span>
+                        <button
+                            onClick={() => setConfig({ ...config, showHealthBars: !config.showHealthBars })}
+                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none ${config.showHealthBars ? 'bg-white' : 'bg-space-dark border border-space-border'
+                                }`}
                         >
                             <span
-                                className={`inline-block h-3 w-3 transform rounded-full transition-transform duration-200 ${
-                                    config.showHealthBars ? 'translate-x-5 bg-black' : 'translate-x-1 bg-gray-500'
-                                }`}
+                                className={`inline-block h-3 w-3 transform rounded-full transition-transform duration-200 ${config.showHealthBars ? 'translate-x-5 bg-black' : 'translate-x-1 bg-gray-500'
+                                    }`}
                             />
                         </button>
                     </div>
@@ -306,15 +301,15 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStart
                     {/* LAST RESORT - EMERGENCY PROTOCOL BUTTON */}
                     <div className="mt-4 relative group">
                         {/* Status Label */}
-                         <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-gray-600 mb-2">
-                             <span className="flex items-center gap-1"><Radiation size={10} /> OMEGA PROTOCOL</span>
-                             <span className={hasNukeBeenUsed ? "text-gray-600 font-bold" : isEmergencyAvailable && !isExploding && isRunning ? "text-red-500 animate-pulse font-bold" : "text-gray-700"}>
-                                 {hasNukeBeenUsed ? "PURGED" : isExploding ? "DETONATING..." : isEmergencyAvailable && isRunning ? "READY" : "LOCKED"}
-                             </span>
-                         </div>
-                        
+                        <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-gray-600 mb-2">
+                            <span className="flex items-center gap-1"><Radiation size={10} /> OMEGA PROTOCOL</span>
+                            <span className={hasNukeBeenUsed ? "text-gray-600 font-bold" : isEmergencyAvailable && !isExploding && isRunning ? "text-red-500 animate-pulse font-bold" : "text-gray-700"}>
+                                {hasNukeBeenUsed ? "PURGED" : isExploding ? "DETONATING..." : isEmergencyAvailable && isRunning ? "READY" : "LOCKED"}
+                            </span>
+                        </div>
+
                         {/* The Box Container */}
-                        <div 
+                        <div
                             className={`relative h-24 w-full bg-black border-2 ${hasNukeBeenUsed ? 'border-gray-800' : 'border-space-border'} overflow-visible select-none ${isShaking ? 'animate-shake' : ''}`}
                             onClick={((!isEmergencyAvailable || isExploding) && isRunning) ? handleEmergencyClick : undefined}
                         >
@@ -330,7 +325,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStart
                                     </div>
                                 ) : (
                                     /* ACTIVE STATE */
-                                    <button 
+                                    <button
                                         onClick={(e) => {
                                             e.stopPropagation(); // Prevent container click
                                             handleEmergencyClick();
@@ -341,7 +336,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStart
                                             flex items-center justify-center transition-all duration-100 
                                             active:scale-90 active:shadow-none active:border-red-950
                                             ${isEmergencyAvailable && !isExploding && isRunning
-                                                ? 'bg-gradient-to-br from-red-500 to-red-700 shadow-[0_0_20px_rgba(239,68,68,0.6)] cursor-pointer hover:shadow-[0_0_30px_rgba(239,68,68,0.8)]' 
+                                                ? 'bg-gradient-to-br from-red-500 to-red-700 shadow-[0_0_20px_rgba(239,68,68,0.6)] cursor-pointer hover:shadow-[0_0_30px_rgba(239,68,68,0.8)]'
                                                 : 'bg-red-950 grayscale opacity-50 cursor-not-allowed'
                                             }
                                         `}
@@ -352,7 +347,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStart
                             </div>
 
                             {/* THE GLASS LID */}
-                            <div 
+                            <div
                                 className={`
                                     absolute -inset-[2px] bg-white/5 backdrop-blur-[2px] border border-white/10 z-20 
                                     transition-all duration-700 ease-in-out transform origin-top
@@ -372,15 +367,15 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStart
                                     <div className="w-1 h-1 bg-white rounded-full"></div>
                                     <div className="w-1 h-1 bg-white rounded-full"></div>
                                 </div>
-                                
+
                                 <span className="text-[10px] font-bold text-white/30 border border-white/20 px-2 py-1 rounded tracking-widest uppercase text-center">
-                                    IN CASE OF<br/>EMERGENCY
+                                    IN CASE OF<br />EMERGENCY
                                 </span>
-                                
+
                                 {/* Reflection Glare */}
                                 <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/10 to-transparent pointer-events-none"></div>
                             </div>
-                            
+
                             {/* Access Denied Overlay (Feedback) */}
                             {showDenied && !hasNukeBeenUsed && (
                                 <div className="absolute inset-0 z-30 flex items-center justify-center bg-red-500/20 backdrop-blur-sm animate-in fade-in duration-200">
@@ -393,7 +388,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStart
                             {/* Used Overlay Text */}
                             {hasNukeBeenUsed && (
                                 <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-                                     <span className="text-gray-600 font-bold tracking-widest text-xs bg-black/50 px-2 border-y border-gray-800 -rotate-12">DISCHARGED</span>
+                                    <span className="text-gray-600 font-bold tracking-widest text-xs bg-black/50 px-2 border-y border-gray-800 -rotate-12">DISCHARGED</span>
                                 </div>
                             )}
                         </div>
