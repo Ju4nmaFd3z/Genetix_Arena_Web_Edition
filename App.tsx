@@ -541,12 +541,18 @@ const App: React.FC = () => {
                                             {targetCoordinates.map((target, idx) => (
                                                 <div
                                                     key={idx}
-                                                    className="absolute w-20 h-20 flex items-center justify-center pointer-events-none"
+                                                    className="absolute flex items-center justify-center pointer-events-none"
                                                     style={{
                                                         // IMPORTANT: Adjusted logic to point to CENTER of cell
                                                         left: `${((target.x + 0.5) / 75) * 100}%`,
                                                         top: `${((target.y + 0.5) / 25) * 100}%`,
                                                         transform: 'translate(-50%, -50%)',
+                                                        // FIX: Use height-based sizing so circles stay circular.
+                                                        // The canvas is 3:1 aspect ratio, so % widths ≠ % heights.
+                                                        // By sizing with '8vh' for both width AND height we get a
+                                                        // true square container, which makes rounded-full circular.
+                                                        width: '8vh',
+                                                        height: '8vh',
                                                     }}
                                                 >
                                                     {/* Outer Ring Animation - Scale In */}
@@ -556,10 +562,16 @@ const App: React.FC = () => {
                                                     ></div>
 
                                                     {/* Spinning Dashed Ring (Slow) */}
-                                                    <div className="absolute w-14 h-14 border border-dashed border-green-400/60 rounded-full animate-[spin_6s_linear_infinite]"></div>
+                                                    <div
+                                                        className="absolute border border-dashed border-green-400/60 rounded-full animate-[spin_6s_linear_infinite]"
+                                                        style={{ width: '5.5vh', height: '5.5vh' }}
+                                                    ></div>
 
                                                     {/* Inner Lock Ring (Rotating counter-clockwise Fast) */}
-                                                    <div className="absolute w-10 h-10 border-t-2 border-b-2 border-green-500 rounded-full animate-[spin_3s_linear_infinite_reverse] shadow-[0_0_10px_rgba(34,197,94,0.6)]"></div>
+                                                    <div
+                                                        className="absolute border-t-2 border-b-2 border-green-500 rounded-full animate-[spin_3s_linear_infinite_reverse] shadow-[0_0_10px_rgba(34,197,94,0.6)]"
+                                                        style={{ width: '4vh', height: '4vh' }}
+                                                    ></div>
 
                                                     {/* Center Target Point */}
                                                     <div className="absolute w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,1)]"></div>
@@ -569,7 +581,9 @@ const App: React.FC = () => {
                                                     <div className="absolute h-full w-[1px] bg-green-500/20"></div>
 
                                                     {/* Data Label */}
-                                                    <div className="absolute top-1 left-12 bg-black/80 border border-green-500/50 p-1 backdrop-blur-sm min-w-[70px]">
+                                                    <div className="absolute bg-black/80 border border-green-500/50 p-1 backdrop-blur-sm min-w-[70px]"
+                                                        style={{ top: '0.2vh', left: '4.5vh' }}
+                                                    >
                                                         <div className="text-[8px] text-green-400 font-mono flex justify-between items-center mb-0.5">
                                                             <span>LOCK</span>
                                                             <span className="text-red-500 font-bold animate-pulse">●</span>
