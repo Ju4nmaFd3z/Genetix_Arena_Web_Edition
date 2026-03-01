@@ -247,20 +247,47 @@ const App: React.FC = () => {
         }
     };
 
-    // [AUDIO SYSTEM] - Cambiar pista al cambiar de vista (solo si no está silenciado)
+    // [AUDIO SYSTEM] - Cambiar pista con fade
     useEffect(() => {
         if (isMuted) return;
 
-        if (view === 'landing') {
-            gameAudioRef.current?.pause();
-            if (gameAudioRef.current) gameAudioRef.current.currentTime = 0;
-            landingAudioRef.current?.play().catch(() => { });
-        } else {
-            landingAudioRef.current?.pause();
-            if (landingAudioRef.current) landingAudioRef.current.currentTime = 0;
-            gameAudioRef.current?.play().catch(() => { });
-        }
-    }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
+        const FADE_DURATION = 1500; // ms total del fade
+        const STEPS = 30;           // cuántos pasos tiene el fade
+        const INTERVAL = FADE_DURATION / STEPS;
+
+        const incoming = view === 'landing' ? landingAudioRef.current : gameAudioRef.current;
+        const outgoing = view === 'landing' ? gameAudioRef.current : landingAudioRef.current;
+        const incomingTargetVol = view === 'landing' ? 0.5 : 0.4;
+
+        if (!incoming || !outgoing) return;
+
+        // Prepara la pista entrante
+        incoming.currentTime = 0;
+        incoming.volume = 0;
+        incoming.play().catch(() => { });
+
+        let step = 0;
+        const fade = setInterval(() => {
+            step++;
+            const progress = step / STEPS; // 0 → 1
+
+            // Fade out de la pista saliente
+            if (outgoing.volume > 0) {
+                outgoing.volume = Math.max(0, 1 - progress);
+            }
+
+            // Fade in de la pista entrante
+            incoming.volume = Math.min(incomingTargetVol, incomingTargetVol * progress);
+
+            if (step >= STEPS) {
+                clearInterval(fade);
+                outgoing.pause();
+                outgoing.volume = 1; // Reset para la próxima vez
+            }
+        }, INTERVAL);
+
+        return () => clearInterval(fade);
+    }, [view]);
 
     // React to running state
     useEffect(() => {
