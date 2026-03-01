@@ -69,13 +69,13 @@ const App: React.FC = () => {
     // Ref to track previous entity counts to avoid unnecessary resets on other state changes (like Pause)
     const prevEntityCountsRef = useRef(config.entityCounts);
 
-    // [TARGETING FIX] - Mide la altura real del wrapper del canvas para
-    // que los reticles de targeting sean círculos perfectos (no óvalos).
-    // El canvas tiene aspecto 3:1, así que % width ≠ % height.
-    // Usando la altura en px podemos dar el mismo valor a width y height.
+    // [TARGETING FIX] - Mide la altura real del wrapper del canvas en px.
+    // Lee el valor inicial con getBoundingClientRect() para que esté disponible
+    // desde el primer render (ResizeObserver solo dispara en cambios posteriores).
     useEffect(() => {
         const wrapper = canvasWrapperRef.current;
         if (!wrapper) return;
+        setCanvasRenderedHeight(wrapper.getBoundingClientRect().height);
         const ro = new ResizeObserver(entries => {
             for (const entry of entries) {
                 setCanvasRenderedHeight(entry.contentRect.height);
@@ -557,67 +557,65 @@ const App: React.FC = () => {
 
                                             {/* Reticles */}
                                             {targetCoordinates.map((target, idx) => {
-                                                // FIX: Use the actual rendered height of the canvas wrapper (in px)
-                                                // to size the reticle. Since the canvas is 3:1 aspect ratio,
-                                                // percentage-based widths are 3× longer than heights, causing ovals.
-                                                // By using the same px value for both width & height we get true circles.
-                                                const H = canvasRenderedHeight;
-                                                const reticleSize = H * 0.32;  // outer ring  (~32% of height)
-                                                const dashedSize = H * 0.22;  // dashed ring (~22%)
-                                                const innerSize = H * 0.16;  // inner ring  (~16%)
+                                                // FIX: Tamaño en px basado en la altura real del canvas.
+                                                // canvasRenderedHeight puede ser 0 en el primer render si el
+                                                // observer aún no disparó — usamos fallback de 150px (valor típico).
+                                                const H = canvasRenderedHeight > 0 ? canvasRenderedHeight : 150;
+                                                const reticleSize = H * 0.32;
+                                                const dashedSize  = H * 0.22;
+                                                const innerSize   = H * 0.16;
                                                 const labelOffset = reticleSize / 2 + 2;
-
                                                 return (
+                                                <div
+                                                    key={idx}
+                                                    className="absolute flex items-center justify-center pointer-events-none"
+                                                    style={{
+                                                        left: `${((target.x + 0.5) / 75) * 100}%`,
+                                                        top: `${((target.y + 0.5) / 25) * 100}%`,
+                                                        transform: 'translate(-50%, -50%)',
+                                                        width:  reticleSize,
+                                                        height: reticleSize,
+                                                    }}
+                                                >
+                                                    {/* Outer Ring - Scale In */}
                                                     <div
-                                                        key={idx}
-                                                        className="absolute flex items-center justify-center pointer-events-none"
-                                                        style={{
-                                                            left: `${((target.x + 0.5) / 75) * 100}%`,
-                                                            top: `${((target.y + 0.5) / 25) * 100}%`,
-                                                            transform: 'translate(-50%, -50%)',
-                                                            width: reticleSize,
-                                                            height: reticleSize,
-                                                        }}
+                                                        className="absolute w-full h-full border border-green-500/20 rounded-full animate-[scale-in_0.3s_ease-out_forwards]"
+                                                        style={{ animationDelay: `${idx * 0.05}s` }}
+                                                    ></div>
+
+                                                    {/* Spinning Dashed Ring */}
+                                                    <div
+                                                        className="absolute border border-dashed border-green-400/60 rounded-full animate-[spin_6s_linear_infinite]"
+                                                        style={{ width: dashedSize, height: dashedSize }}
+                                                    ></div>
+
+                                                    {/* Inner Lock Ring */}
+                                                    <div
+                                                        className="absolute border-t-2 border-b-2 border-green-500 rounded-full animate-[spin_3s_linear_infinite_reverse] shadow-[0_0_10px_rgba(34,197,94,0.6)]"
+                                                        style={{ width: innerSize, height: innerSize }}
+                                                    ></div>
+
+                                                    {/* Center Dot */}
+                                                    <div className="absolute w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,1)]"></div>
+
+                                                    {/* Crosshair Lines */}
+                                                    <div className="absolute w-full h-[1px] bg-green-500/20"></div>
+                                                    <div className="absolute h-full w-[1px] bg-green-500/20"></div>
+
+                                                    {/* Data Label */}
+                                                    <div
+                                                        className="absolute bg-black/80 border border-green-500/50 p-1 backdrop-blur-sm min-w-[70px]"
+                                                        style={{ top: 0, left: labelOffset }}
                                                     >
-                                                        {/* Outer Ring Animation - Scale In */}
-                                                        <div
-                                                            className="absolute w-full h-full border border-green-500/20 rounded-full animate-[scale-in_0.3s_ease-out_forwards]"
-                                                            style={{ animationDelay: `${idx * 0.05}s` }}
-                                                        ></div>
-
-                                                        {/* Spinning Dashed Ring (Slow) */}
-                                                        <div
-                                                            className="absolute border border-dashed border-green-400/60 rounded-full animate-[spin_6s_linear_infinite]"
-                                                            style={{ width: dashedSize, height: dashedSize }}
-                                                        ></div>
-
-                                                        {/* Inner Lock Ring (Rotating counter-clockwise Fast) */}
-                                                        <div
-                                                            className="absolute border-t-2 border-b-2 border-green-500 rounded-full animate-[spin_3s_linear_infinite_reverse] shadow-[0_0_10px_rgba(34,197,94,0.6)]"
-                                                            style={{ width: innerSize, height: innerSize }}
-                                                        ></div>
-
-                                                        {/* Center Target Point */}
-                                                        <div className="absolute w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,1)]"></div>
-
-                                                        {/* Crosshair Lines */}
-                                                        <div className="absolute w-full h-[1px] bg-green-500/20"></div>
-                                                        <div className="absolute h-full w-[1px] bg-green-500/20"></div>
-
-                                                        {/* Data Label */}
-                                                        <div
-                                                            className="absolute bg-black/80 border border-green-500/50 p-1 backdrop-blur-sm min-w-[70px]"
-                                                            style={{ top: 0, left: labelOffset }}
-                                                        >
-                                                            <div className="text-[8px] text-green-400 font-mono flex justify-between items-center mb-0.5">
-                                                                <span>LOCK</span>
-                                                                <span className="text-red-500 font-bold animate-pulse">●</span>
-                                                            </div>
-                                                            <div className="text-[6px] text-green-600 font-mono tracking-wider">
-                                                                ID: {idx.toString().padStart(3, '0')}
-                                                            </div>
+                                                        <div className="text-[8px] text-green-400 font-mono flex justify-between items-center mb-0.5">
+                                                            <span>LOCK</span>
+                                                            <span className="text-red-500 font-bold animate-pulse">●</span>
+                                                        </div>
+                                                        <div className="text-[6px] text-green-600 font-mono tracking-wider">
+                                                            ID: {idx.toString().padStart(3, '0')}
                                                         </div>
                                                     </div>
+                                                </div>
                                                 );
                                             })}
 
