@@ -166,8 +166,8 @@ const ChaseAnimation = () => {
             ref={containerRef}
             className="absolute top-0 right-0 w-[40%] h-full pointer-events-none hidden md:block overflow-hidden z-0"
             style={{
-                maskImage: 'linear-gradient(to right, transparent 0%, black 20%, black 100%)',
-                WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 20%, black 100%)'
+                maskImage: 'linear-gradient(to right, transparent 0%, black 20%, black 80%, transparent 100%)',
+                WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 20%, black 80%, transparent 100%)'
             }}
         >
             {entities.map(e => (
@@ -181,14 +181,18 @@ const ChaseAnimation = () => {
                 >
                     {/* Entity Shape */}
                     {e.type === 'ally' ? (
-                        // Ally: Circle with Core (Matches Canvas) - Larger
-                        <div className="relative w-5 h-5 flex items-center justify-center">
-                            <div className="absolute inset-0 rounded-full border-[2px] border-emerald-500"></div>
-                            <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_6px_rgba(16,185,129,0.5)]"></div>
+                        // Ally: Circle with Core (Matches Canvas) - Smaller - SVG for perfect centering
+                        <div className="relative w-4 h-4 flex items-center justify-center text-emerald-500">
+                            <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible">
+                                {/* Outer Ring */}
+                                <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="12" />
+                                {/* Inner Core with Glow */}
+                                <circle cx="50" cy="50" r="22" fill="currentColor" style={{ filter: 'drop-shadow(0 0 6px rgba(16,185,129,0.8))' }} />
+                            </svg>
                         </div>
                     ) : (
-                        // Enemy: Razor Star (Matches Canvas)
-                        <div className="relative w-7 h-7 flex items-center justify-center text-red-600">
+                        // Enemy: Razor Star (Matches Canvas) - Smaller
+                        <div className="relative w-5 h-5 flex items-center justify-center text-red-600">
                             <svg viewBox="0 0 24 24" className="w-full h-full drop-shadow-sm" style={{ filter: 'drop-shadow(0 0 2px rgba(220,38,38,0.6))' }}>
                                 <path
                                     d="M12 2 L14.5 9.5 L22 12 L14.5 14.5 L12 22 L9.5 14.5 L2 12 L9.5 9.5 Z"
@@ -399,7 +403,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, isMuted, onToggleMut
                     </div>
                 ) : (
                     /* Default Landing Content */
-                    <div className="max-w-4xl mx-auto md:mx-0 animate-in fade-in duration-500">
+                    <div className="max-w-4xl mx-auto md:mx-0 md:max-w-[55%] animate-in fade-in duration-500">
                         <h1 className="text-5xl md:text-9xl font-bold tracking-tighter text-white mb-6 leading-none">
                             SIMULACIÓN <br />
                             DE BATALLA

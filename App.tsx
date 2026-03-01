@@ -309,6 +309,29 @@ const App: React.FC = () => {
         }, INTERVAL);
     };
 
+    // [AUDIO SYSTEM] - Unlock Audio Context for Mobile
+    const unlockAudioContext = () => {
+        const audioElements = [
+            landingAudioRef.current,
+            gameAudioRef.current,
+            alliesWinAudioRef.current,
+            enemiesWinAudioRef.current,
+            drawAudioRef.current
+        ];
+
+        audioElements.forEach(audio => {
+            if (audio) {
+                // Play and immediately pause to unlock the audio context on mobile
+                audio.play().then(() => {
+                    audio.pause();
+                    // Restore loop if needed (though we only paused)
+                }).catch(() => {
+                    // Ignore errors if autoplay is blocked or already playing
+                });
+            }
+        });
+    };
+
     // [AUDIO SYSTEM] - Botón mute
     const toggleMute = () => {
         const newMuted = !isMuted;
@@ -319,6 +342,9 @@ const App: React.FC = () => {
             [landingAudioRef, gameAudioRef, alliesWinAudioRef, enemiesWinAudioRef, drawAudioRef]
                 .forEach(r => r.current?.pause());
         } else {
+            // Unlock all audio contexts on mobile interaction
+            unlockAudioContext();
+
             // Reanudar la pista que corresponde exactamente al estado actual
             if (view === 'landing') {
                 landingAudioRef.current?.play().catch(() => { });
@@ -473,11 +499,15 @@ const App: React.FC = () => {
         }
     };
 
+
     const renderContent = () => {
         if (view === 'landing') {
             return (
                 <LandingPage
-                    onStart={() => switchView('game', () => initializeSystem(false))}
+                    onStart={() => {
+                        unlockAudioContext();
+                        switchView('game', () => initializeSystem(false));
+                    }}
                     isMuted={isMuted}
                     onToggleMute={toggleMute}
                 />
@@ -487,13 +517,13 @@ const App: React.FC = () => {
         const resultStyles = gameResult ? getResultStyles() : null;
 
         return (
-            <div className="h-screen bg-space-black text-space-text font-sans flex flex-col md:flex-row overflow-hidden">
+            <div className="h-[100dvh] bg-space-black text-space-text font-sans flex flex-col md:flex-row overflow-hidden">
 
                 {/* LEFT: Game Viewport */}
-                <div className="flex-1 flex flex-col h-full relative order-2 md:order-1">
+                <div className="flex-1 flex flex-col h-full relative order-1 md:order-1 min-h-0">
 
                     {/* Header */}
-                    <header className="h-14 md:h-16 border-b border-space-border flex items-center justify-between px-4 md:px-6 bg-space-black z-20 shrink-0">
+                    <header className="h-12 md:h-16 border-b border-space-border flex items-center justify-between px-4 md:px-6 bg-space-black z-20 shrink-0">
                         <div className="flex items-center gap-4">
                             {/* Back arrow removed */}
                             <div>
@@ -512,7 +542,7 @@ const App: React.FC = () => {
                         <div className="absolute inset-0 bg-grid-pattern bg-[length:40px_40px] opacity-10 pointer-events-none"></div>
 
                         <div ref={canvasWrapperRef} className={`
-                            relative border border-space-border shadow-2xl shadow-black bg-black w-full max-w-[95%] aspect-[3/1] 
+                            relative border border-space-border shadow-2xl shadow-black bg-black w-full max-w-[98%] md:max-w-[95%] aspect-[3/1] 
                             ${isExploding ? 'animate-omega-sequence' : 'animate-idle-drift'}
                         `}>
                             {/* Fallout Noise Grain (Controlled by React for fading) */}
@@ -520,10 +550,10 @@ const App: React.FC = () => {
                             <div className={`absolute inset-0 z-10 opacity-30 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] pointer-events-none transition-opacity duration-[8000ms] ease-out ${showFalloutGrain ? 'opacity-30' : 'opacity-0'}`}></div>
 
                             {/* Corner Accents */}
-                            <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-space-ally"></div>
-                            <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-space-ally"></div>
-                            <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-space-ally"></div>
-                            <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-space-ally"></div>
+                            <div className="absolute -top-1 -left-1 w-3 h-3 md:w-4 md:h-4 border-t-2 border-l-2 border-space-ally"></div>
+                            <div className="absolute -top-1 -right-1 w-3 h-3 md:w-4 md:h-4 border-t-2 border-r-2 border-space-ally"></div>
+                            <div className="absolute -bottom-1 -left-1 w-3 h-3 md:w-4 md:h-4 border-b-2 border-l-2 border-space-ally"></div>
+                            <div className="absolute -bottom-1 -right-1 w-3 h-3 md:w-4 md:h-4 border-b-2 border-r-2 border-space-ally"></div>
 
                             <canvas
                                 ref={canvasRef}
@@ -555,73 +585,59 @@ const App: React.FC = () => {
                                             {/* Scanlines for HUD */}
                                             <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(0,255,0,0.06),rgba(0,255,0,0.02),rgba(0,0,0,0.06))] bg-[length:100%_2px,3px_100%] pointer-events-none"></div>
 
-                                            {/* Reticles */}
+                                            {/* Reticles - NEW DESIGN */}
                                             {targetCoordinates.map((target, idx) => {
-                                                // FIX: Tamaño en px basado en la altura real del canvas.
-                                                // canvasRenderedHeight puede ser 0 en el primer render si el
-                                                // observer aún no disparó — usamos fallback de 150px (valor típico).
-                                                const H = canvasRenderedHeight > 0 ? canvasRenderedHeight : 150;
-                                                const reticleSize = H * 0.32;
-                                                const dashedSize  = H * 0.22;
-                                                const innerSize   = H * 0.16;
-                                                const labelOffset = reticleSize / 2 + 2;
+                                                // FIX: Ensure perfect square aspect ratio for the reticle container
+                                                // We use a fixed percentage size relative to the canvas height to keep it consistent
+                                                // Reduced from 5% to 3.5% for even tighter targeting
+                                                const sizePercent = 3.5;
+
                                                 return (
-                                                <div
-                                                    key={idx}
-                                                    className="absolute flex items-center justify-center pointer-events-none"
-                                                    style={{
-                                                        left: `${((target.x + 0.5) / 75) * 100}%`,
-                                                        top: `${((target.y + 0.5) / 25) * 100}%`,
-                                                        transform: 'translate(-50%, -50%)',
-                                                        width:  reticleSize,
-                                                        height: reticleSize,
-                                                    }}
-                                                >
-                                                    {/* Outer Ring - Scale In */}
                                                     <div
-                                                        className="absolute w-full h-full border border-green-500/20 rounded-full animate-[scale-in_0.3s_ease-out_forwards]"
-                                                        style={{ animationDelay: `${idx * 0.05}s` }}
-                                                    ></div>
-
-                                                    {/* Spinning Dashed Ring */}
-                                                    <div
-                                                        className="absolute border border-dashed border-green-400/60 rounded-full animate-[spin_6s_linear_infinite]"
-                                                        style={{ width: dashedSize, height: dashedSize }}
-                                                    ></div>
-
-                                                    {/* Inner Lock Ring */}
-                                                    <div
-                                                        className="absolute border-t-2 border-b-2 border-green-500 rounded-full animate-[spin_3s_linear_infinite_reverse] shadow-[0_0_10px_rgba(34,197,94,0.6)]"
-                                                        style={{ width: innerSize, height: innerSize }}
-                                                    ></div>
-
-                                                    {/* Center Dot */}
-                                                    <div className="absolute w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,1)]"></div>
-
-                                                    {/* Crosshair Lines */}
-                                                    <div className="absolute w-full h-[1px] bg-green-500/20"></div>
-                                                    <div className="absolute h-full w-[1px] bg-green-500/20"></div>
-
-                                                    {/* Data Label */}
-                                                    <div
-                                                        className="absolute bg-black/80 border border-green-500/50 p-1 backdrop-blur-sm min-w-[70px]"
-                                                        style={{ top: 0, left: labelOffset }}
+                                                        key={idx}
+                                                        className="absolute flex items-center justify-center pointer-events-none"
+                                                        style={{
+                                                            left: `${((target.x + 0.5) / 75) * 100}%`,
+                                                            top: `${((target.y + 0.5) / 25) * 100}%`,
+                                                            transform: 'translate(-50%, -50%)',
+                                                            width: `${sizePercent}%`,
+                                                            aspectRatio: '1/1', // Force square aspect ratio
+                                                        }}
                                                     >
-                                                        <div className="text-[8px] text-green-400 font-mono flex justify-between items-center mb-0.5">
-                                                            <span>LOCK</span>
-                                                            <span className="text-red-500 font-bold animate-pulse">●</span>
-                                                        </div>
-                                                        <div className="text-[6px] text-green-600 font-mono tracking-wider">
-                                                            ID: {idx.toString().padStart(3, '0')}
+                                                        {/* 1. Corner Brackets (The "Box" look) */}
+                                                        <div className="absolute inset-0 border-2 border-green-500/60 animate-[ping_1s_cubic-bezier(0,0,0.2,1)_infinite] opacity-20"></div>
+
+                                                        {/* Top Left */}
+                                                        <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-green-400"></div>
+                                                        {/* Top Right */}
+                                                        <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-green-400"></div>
+                                                        {/* Bottom Left */}
+                                                        <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-green-400"></div>
+                                                        {/* Bottom Right */}
+                                                        <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-green-400"></div>
+
+                                                        {/* 2. Center Crosshair */}
+                                                        <div className="absolute w-full h-[1px] bg-green-500/30"></div>
+                                                        <div className="absolute h-full w-[1px] bg-green-500/30"></div>
+                                                        <div className="absolute w-1 h-1 bg-red-500 rounded-full shadow-[0_0_5px_#ef4444]"></div>
+
+                                                        {/* 3. Rotating Elements (Square to avoid oval distortion) */}
+                                                        <div className="absolute inset-1 border border-dashed border-green-500/30 rounded-full animate-[spin_4s_linear_infinite]"></div>
+
+                                                        {/* 4. Data Label (Floating outside) */}
+                                                        <div className="absolute -top-4 left-1/2 -translate-x-1/2 whitespace-nowrap bg-black/80 border border-green-500/50 px-1 py-0.5">
+                                                            <div className="text-[6px] md:text-[8px] text-green-400 font-mono flex items-center gap-1">
+                                                                <span className="animate-pulse">TARGET</span>
+                                                                <span className="text-white font-bold">{idx.toString().padStart(3, '0')}</span>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
                                                 );
                                             })}
 
                                             {/* Centered Locking Text - Military Style */}
-                                            <div className="absolute bottom-8 left-0 right-0 flex justify-center items-end">
-                                                <div className="bg-black/90 border border-green-500/50 text-green-500 px-8 py-2 font-mono flex flex-col items-center gap-1 shadow-[0_0_15px_rgba(34,197,94,0.2)]">
+                                            <div className="absolute bottom-4 md:bottom-8 left-0 right-0 flex justify-center items-end">
+                                                <div className="bg-black/90 border border-green-500/50 text-green-500 px-4 md:px-8 py-2 font-mono flex flex-col items-center gap-1 shadow-[0_0_15px_rgba(34,197,94,0.2)] scale-75 md:scale-100 origin-bottom">
                                                     <div className="flex items-center gap-3 text-sm font-bold tracking-[0.2em]">
                                                         <Crosshair className="animate-spin-slow" size={16} />
                                                         <span>TARGET ACQUISITION</span>
@@ -641,7 +657,7 @@ const App: React.FC = () => {
                                     {/* 5. Warning Text - Initial Phase */}
                                     {targetCoordinates.length === 0 && (
                                         <div className="absolute top-10 left-0 right-0 flex justify-center animate-text-lifecycle">
-                                            <div className="bg-red-600 text-black px-6 py-1 font-mono text-xl font-bold tracking-[0.5em] border-2 border-black shadow-[0_0_10px_rgba(220,38,38,0.8)] transform -skew-x-12">
+                                            <div className="bg-red-600 text-black px-6 py-1 font-mono text-xl font-bold tracking-[0.5em] border-2 border-black shadow-[0_0_10px_rgba(220,38,38,0.8)] transform -skew-x-12 scale-75 md:scale-100">
                                                 PROTOCOLO OMEGA INICIADO
                                             </div>
                                         </div>
@@ -655,7 +671,7 @@ const App: React.FC = () => {
                             <div className="absolute inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-500">
                                 <div className={`
                                     relative bg-space-panel border-2 ${resultStyles.borderColor} ${resultStyles.glow}
-                                    w-full max-w-md shadow-2xl transform scale-100 overflow-hidden
+                                    w-full max-w-md shadow-2xl transform scale-90 md:scale-100 overflow-hidden
                                 `}>
                                     {/* Tech Background Pattern in Modal */}
                                     <div className={`absolute inset-0 bg-gradient-to-b ${resultStyles.bgGradient} opacity-50 pointer-events-none`}></div>
@@ -671,12 +687,12 @@ const App: React.FC = () => {
                                     </div>
 
                                     {/* Modal Content */}
-                                    <div className="p-8 flex flex-col items-center text-center relative z-10">
+                                    <div className="p-6 md:p-8 flex flex-col items-center text-center relative z-10">
                                         <div className="mb-6">
                                             {resultStyles.icon}
                                         </div>
 
-                                        <h2 className={`text-3xl md:text-4xl font-bold tracking-tighter ${resultStyles.textColor} mb-2 drop-shadow-md`}>
+                                        <h2 className={`text-2xl md:text-4xl font-bold tracking-tighter ${resultStyles.textColor} mb-2 drop-shadow-md`}>
                                             {resultStyles.title}
                                         </h2>
                                         <p className="text-gray-400 text-xs font-mono uppercase tracking-widest mb-8">
@@ -703,44 +719,47 @@ const App: React.FC = () => {
                         )}
                     </div>
 
-                    {/* Bottom Console */}
-                    <ConsoleLog logs={logs} />
+                    {/* Bottom Console - Hidden on very small screens if needed, or scrollable */}
+                    <div className="hidden md:block">
+                        <ConsoleLog logs={logs} />
+                    </div>
                 </div>
 
                 {/* RIGHT: Dashboard Sidebar */}
-                <aside className="w-full md:w-80 border-t md:border-t-0 md:border-l border-space-border bg-space-black flex flex-col h-[35vh] md:h-full z-30 order-1 md:order-2 shrink-0">
+                {/* Mobile: 40% height, Scrollable. Desktop: Full height, Fixed width */}
+                <aside className="w-full md:w-80 border-t md:border-t-0 md:border-l border-space-border bg-space-black flex flex-col h-[45vh] md:h-full z-30 order-2 md:order-2 shrink-0">
 
                     {/* Stats Header */}
-                    <div className="p-4 border-b border-space-border bg-space-panel">
-                        <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 block mb-3 text-center md:text-left">TELEMETRÍA EN VIVO</span>
-                        <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2 md:p-4 border-b border-space-border bg-space-panel">
+                        <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 block mb-2 md:mb-3 text-center md:text-left">TELEMETRÍA EN VIVO</span>
+                        <div className="grid grid-cols-4 md:grid-cols-2 gap-2">
                             {/* Stat Card */}
-                            <div className="bg-space-dark p-2 md:p-3 border border-space-border/50 flex flex-col justify-center">
-                                <div className="text-space-ally flex items-center gap-1.5 mb-1 text-[10px] md:text-xs font-bold truncate">
-                                    <ShieldAlert size={12} className="shrink-0" /> ALIADOS
+                            <div className="bg-space-dark p-1.5 md:p-3 border border-space-border/50 flex flex-col justify-center items-center md:items-start">
+                                <div className="text-space-ally flex items-center gap-1.5 mb-1 text-[9px] md:text-xs font-bold truncate">
+                                    <ShieldAlert size={10} className="shrink-0 md:w-3 md:h-3" /> <span className="hidden md:inline">ALIADOS</span><span className="md:hidden">ALI</span>
                                 </div>
-                                <div className="text-xl md:text-2xl font-mono text-white leading-none">{stats.allies}</div>
+                                <div className="text-lg md:text-2xl font-mono text-white leading-none">{stats.allies}</div>
                             </div>
 
-                            <div className="bg-space-dark p-2 md:p-3 border border-space-border/50 flex flex-col justify-center">
-                                <div className="text-space-enemy flex items-center gap-1.5 mb-1 text-[10px] md:text-xs font-bold truncate">
-                                    <Cross size={12} className="rotate-45 shrink-0" /> ENEMIGOS
+                            <div className="bg-space-dark p-1.5 md:p-3 border border-space-border/50 flex flex-col justify-center items-center md:items-start">
+                                <div className="text-space-enemy flex items-center gap-1.5 mb-1 text-[9px] md:text-xs font-bold truncate">
+                                    <Cross size={10} className="rotate-45 shrink-0 md:w-3 md:h-3" /> <span className="hidden md:inline">ENEMIGOS</span><span className="md:hidden">ENE</span>
                                 </div>
-                                <div className="text-xl md:text-2xl font-mono text-white leading-none">{stats.enemies}</div>
+                                <div className="text-lg md:text-2xl font-mono text-white leading-none">{stats.enemies}</div>
                             </div>
 
-                            <div className="bg-space-dark p-2 md:p-3 border border-space-border/50 flex flex-col justify-center">
-                                <div className="text-space-healer flex items-center gap-1.5 mb-1 text-[10px] md:text-xs font-bold truncate">
-                                    <Heart size={12} className="shrink-0" /> CURANDEROS
+                            <div className="bg-space-dark p-1.5 md:p-3 border border-space-border/50 flex flex-col justify-center items-center md:items-start">
+                                <div className="text-space-healer flex items-center gap-1.5 mb-1 text-[9px] md:text-xs font-bold truncate">
+                                    <Heart size={10} className="shrink-0 md:w-3 md:h-3" /> <span className="hidden md:inline">MÉDICOS</span><span className="md:hidden">MED</span>
                                 </div>
-                                <div className="text-xl md:text-2xl font-mono text-white leading-none">{stats.healers}</div>
+                                <div className="text-lg md:text-2xl font-mono text-white leading-none">{stats.healers}</div>
                             </div>
 
-                            <div className="bg-space-dark p-2 md:p-3 border border-space-border/50 flex flex-col justify-center">
-                                <div className="text-space-obstacle flex items-center gap-1.5 mb-1 text-[10px] md:text-xs font-bold truncate">
-                                    <Box size={12} className="shrink-0" /> OBSTÁCULOS
+                            <div className="bg-space-dark p-1.5 md:p-3 border border-space-border/50 flex flex-col justify-center items-center md:items-start">
+                                <div className="text-space-obstacle flex items-center gap-1.5 mb-1 text-[9px] md:text-xs font-bold truncate">
+                                    <Box size={10} className="shrink-0 md:w-3 md:h-3" /> <span className="hidden md:inline">BLOQUES</span><span className="md:hidden">OBS</span>
                                 </div>
-                                <div className="text-xl md:text-2xl font-mono text-white leading-none">{stats.obstacles}</div>
+                                <div className="text-lg md:text-2xl font-mono text-white leading-none">{stats.obstacles}</div>
                             </div>
                         </div>
                     </div>
