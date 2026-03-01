@@ -251,8 +251,8 @@ const App: React.FC = () => {
     useEffect(() => {
         if (isMuted) return;
 
-        const FADE_DURATION = 1500; // ms total del fade
-        const STEPS = 30;           // cuántos pasos tiene el fade
+        const FADE_DURATION = 1500;
+        const STEPS = 30;
         const INTERVAL = FADE_DURATION / STEPS;
 
         const incoming = view === 'landing' ? landingAudioRef.current : gameAudioRef.current;
@@ -261,7 +261,9 @@ const App: React.FC = () => {
 
         if (!incoming || !outgoing) return;
 
-        // Prepara la pista entrante
+        // Capturar el volumen real de salida ANTES de empezar
+        const outgoingStartVol = outgoing.volume;
+
         incoming.currentTime = 0;
         incoming.volume = 0;
         incoming.play().catch(() => { });
@@ -269,20 +271,16 @@ const App: React.FC = () => {
         let step = 0;
         const fade = setInterval(() => {
             step++;
-            const progress = step / STEPS; // 0 → 1
+            const progress = step / STEPS;
 
-            // Fade out de la pista saliente
-            if (outgoing.volume > 0) {
-                outgoing.volume = Math.max(0, 1 - progress);
-            }
-
-            // Fade in de la pista entrante
+            // Fade out desde el volumen actual, no desde 1
+            outgoing.volume = Math.max(0, outgoingStartVol * (1 - progress));
             incoming.volume = Math.min(incomingTargetVol, incomingTargetVol * progress);
 
             if (step >= STEPS) {
                 clearInterval(fade);
                 outgoing.pause();
-                outgoing.volume = 1; // Reset para la próxima vez
+                outgoing.volume = outgoingStartVol; // Reset al volumen original
             }
         }, INTERVAL);
 
