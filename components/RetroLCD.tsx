@@ -9,13 +9,15 @@ interface RetroLCDProps {
 const RetroLCD: React.FC<RetroLCDProps> = ({ message, type = 'normal', subMessage }) => {
     const [displayText, setDisplayText] = useState('');
 
-    // Typing effect
+    // Typing effect — FIX: se reemplaza el patrón `prev + message.charAt(i)` por
+    // `message.slice(0, i + 1)` para evitar el bug de closure stale donde `i` ya
+    // vale 1 en el primer disparo del intervalo, saltándose siempre la primera letra.
     useEffect(() => {
-        let i = 0;
         setDisplayText('');
+        let i = 0;
         const timer = setInterval(() => {
             if (i < message.length) {
-                setDisplayText(prev => prev + message.charAt(i));
+                setDisplayText(message.slice(0, i + 1));
                 i++;
             } else {
                 clearInterval(timer);
@@ -39,15 +41,17 @@ const RetroLCD: React.FC<RetroLCDProps> = ({ message, type = 'normal', subMessag
     return (
         <div className={`relative w-full p-3 rounded-sm border-2 font-mono text-xs uppercase tracking-widest overflow-hidden shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] ${baseClasses}`}>
             {/* Scanlines Overlay */}
-            <div className="absolute inset-0 pointer-events-none opacity-10"
+            <div
+                className="absolute inset-0 pointer-events-none opacity-10"
                 style={{
-                    backgroundImage: 'linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06))',
-                    backgroundSize: '100% 2px, 3px 100%'
+                    backgroundImage:
+                        'linear-gradient(rgba(18,16,16,0) 50%, rgba(0,0,0,0.25) 50%), linear-gradient(90deg, rgba(255,0,0,0.06), rgba(0,255,0,0.02), rgba(0,0,255,0.06))',
+                    backgroundSize: '100% 2px, 3px 100%',
                 }}
             />
 
             {/* Glow Effect */}
-            <div className={`absolute inset-0 pointer-events-none opacity-20 blur-md ${type === 'critical' ? 'bg-red-500' : 'bg-green-500'}`}></div>
+            <div className={`absolute inset-0 pointer-events-none opacity-20 blur-md ${type === 'critical' ? 'bg-red-500' : 'bg-green-500'}`} />
 
             {/* Content */}
             <div className="relative z-10 flex flex-col gap-1">
@@ -56,12 +60,14 @@ const RetroLCD: React.FC<RetroLCDProps> = ({ message, type = 'normal', subMessag
                     <span className="animate-pulse">{type === 'critical' ? '!!!' : 'OK'}</span>
                 </div>
 
-                <div className="font-bold text-sm min-h-[1.25rem] whitespace-nowrap overflow-hidden text-ellipsis">
+                {/* FIX: eliminado whitespace-nowrap + overflow/text-ellipsis.
+                    break-all garantiza que no se corte aunque el contenedor sea estrecho. */}
+                <div className="font-bold text-sm min-h-[1.25rem] break-all leading-snug">
                     {displayText}<span className="animate-pulse">_</span>
                 </div>
 
                 {subMessage && (
-                    <div className="text-[10px] opacity-80 mt-1 truncate">
+                    <div className="text-[10px] opacity-80 mt-1 break-all">
                         {subMessage}
                     </div>
                 )}

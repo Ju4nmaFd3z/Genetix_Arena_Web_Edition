@@ -730,11 +730,11 @@ const App: React.FC = () => {
                                             {/* Fila 1: Supervivientes / Hostiles */}
                                             <div className="grid grid-cols-2 gap-px bg-space-border">
                                                 <div className="bg-space-dark p-2 flex flex-col">
-                                                    <span className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Supervivientes</span>
+                                                    <span className="text-[9px] text-gray-500 uppercase tracking-normal mb-0.5">Superv.</span>
                                                     <span className="text-lg font-mono text-space-ally leading-none">{stats.allies}</span>
                                                 </div>
                                                 <div className="bg-space-dark p-2 flex flex-col">
-                                                    <span className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Hostiles Rest.</span>
+                                                    <span className="text-[9px] text-gray-500 uppercase tracking-normal mb-0.5">Hostiles</span>
                                                     <span className="text-lg font-mono text-space-enemy leading-none">{stats.enemies}</span>
                                                 </div>
                                             </div>
@@ -743,11 +743,11 @@ const App: React.FC = () => {
                                                 {/* Fila 2: Supervivencia / Curación */}
                                                 <div className="grid grid-cols-2 gap-px bg-space-border">
                                                     <div className="bg-space-dark p-2 flex flex-col">
-                                                        <span className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Supervivencia</span>
+                                                        <span className="text-[9px] text-gray-500 uppercase tracking-normal mb-0.5">Supervivencia</span>
                                                         <span className="text-base font-mono text-white leading-none">{detailedStats.survivalRate}</span>
                                                     </div>
                                                     <div className="bg-space-dark p-2 flex flex-col">
-                                                        <span className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Curación</span>
+                                                        <span className="text-[9px] text-gray-500 uppercase tracking-normal mb-0.5">Curación</span>
                                                         <span className="text-base font-mono text-space-healer leading-none">{detailedStats.totalHealingDone.toLocaleString()} <span className="text-[9px] text-gray-600">HP</span></span>
                                                     </div>
                                                 </div>
@@ -755,11 +755,11 @@ const App: React.FC = () => {
                                                 {/* Fila 3: Vida media */}
                                                 <div className="grid grid-cols-2 gap-px bg-space-border">
                                                     <div className="bg-space-dark p-2 flex flex-col">
-                                                        <span className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Vida Media (Ali)</span>
+                                                        <span className="text-[9px] text-gray-500 uppercase tracking-normal mb-0.5">Vida media Ali.</span>
                                                         <span className="text-base font-mono text-space-ally leading-none">{detailedStats.averageAllyLifespan} <span className="text-[9px] text-gray-600">t</span></span>
                                                     </div>
                                                     <div className="bg-space-dark p-2 flex flex-col">
-                                                        <span className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Vida Media (Ene)</span>
+                                                        <span className="text-[9px] text-gray-500 uppercase tracking-normal mb-0.5">Vida media Ene.</span>
                                                         <span className="text-base font-mono text-space-enemy leading-none">{detailedStats.averageEnemyLifespan} <span className="text-[9px] text-gray-600">t</span></span>
                                                     </div>
                                                 </div>
@@ -767,11 +767,11 @@ const App: React.FC = () => {
                                                 {/* Fila 4: Daño */}
                                                 <div className="grid grid-cols-2 gap-px bg-space-border">
                                                     <div className="bg-space-dark p-2 flex flex-col">
-                                                        <span className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Daño Infligido</span>
+                                                        <span className="text-[9px] text-gray-500 uppercase tracking-normal mb-0.5">Daño infligido</span>
                                                         <span className="text-base font-mono text-white leading-none">{detailedStats.totalDamageDealtByAllies.toLocaleString()}</span>
                                                     </div>
                                                     <div className="bg-space-dark p-2 flex flex-col">
-                                                        <span className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Daño Recibido</span>
+                                                        <span className="text-[9px] text-gray-500 uppercase tracking-normal mb-0.5">Daño recibido</span>
                                                         <span className="text-base font-mono text-white leading-none">{detailedStats.totalDamageDealtByEnemies.toLocaleString()}</span>
                                                     </div>
                                                 </div>
