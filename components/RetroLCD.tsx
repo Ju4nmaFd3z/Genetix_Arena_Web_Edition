@@ -64,7 +64,7 @@ const RetroLCD: React.FC<RetroLCDProps> = ({ message, type = 'normal', subMessag
                     Se usa break-words para que el wrap solo ocurra en espacios (no en mitad de
                     una palabra como "INPUT"), y min-h de 2 líneas para que el componente no
                     salte de altura cuando el texto hace wrap. */}
-                <div className="font-bold text-sm min-h-[2.5rem] break-words leading-snug">
+                <div className="font-bold text-xs tracking-wide min-h-[1.5rem] whitespace-nowrap overflow-hidden text-ellipsis leading-snug">
                     {displayText}<span className="animate-pulse">_</span>
                 </div>
 

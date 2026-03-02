@@ -748,9 +748,9 @@ const App: React.FC = () => {
 
                 {/* Modal Result Overlay - MOVED HERE TO BE GLOBAL */}
                 {gameResult && resultStyles && (
-                    <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-[100] flex items-center justify-center p-4 animate-in fade-in duration-500">
+                    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-500 cursor-default">
                         <div className={`
-                            relative bg-space-panel border-2 ${resultStyles.borderColor} ${resultStyles.glow}
+                            relative bg-space-panel/95 backdrop-blur-xl border-2 ${resultStyles.borderColor} ${resultStyles.glow}
                             w-full max-w-md shadow-2xl transform scale-90 md:scale-100 flex flex-col max-h-[90vh]
                         `}>
                             {/* Tech Background Pattern in Modal */}
@@ -763,7 +763,15 @@ const App: React.FC = () => {
                                     <Activity size={16} className={resultStyles.textColor} />
                                     <span className="text-[10px] uppercase tracking-[0.2em] text-gray-400">REPORTE DE MISIÓN</span>
                                 </div>
-                                <div className="text-[10px] text-gray-500 font-mono">ID: {missionId}</div>
+                                <div className="flex items-center gap-4">
+                                    <div className="text-[10px] text-gray-500 font-mono">ID: {missionId}</div>
+                                    <button
+                                        onClick={() => setGameResult(null)}
+                                        className="text-gray-500 hover:text-white transition-colors hover:bg-white/10 p-1 rounded flex items-center justify-center"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Modal Content */}
