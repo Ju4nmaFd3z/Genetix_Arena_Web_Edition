@@ -5,7 +5,7 @@
 ![Design](https://img.shields.io/badge/Design-Space%20Tactical%20HUD-darkgreen)
 
 > **Simulador táctico de combate autónomo con inteligencia artificial emergente.**  
-> Migración de alta fidelidad desde JavaScript vanilla a una arquitectura moderna con **TypeScript + React 19**, bajo una interfaz de grado empresarial inspirada en dashboards militares y sistemas de control de SpaceX.
+> Migración de alta fidelidad desde JavaScript vanilla a una arquitectura moderna con **TypeScript + React 19**, bajo una interfaz inspirada en dashboards militares y sistemas de control.
 
 ---
 
@@ -24,13 +24,12 @@
 
 ## ✨ Características de la Versión 3.5
 
-### 🖥️ Interfaz Táctica (HUD Redeseñado)
+### 🖥️ Interfaz Táctica (HUD)
 
 - **Diseño Responsive Completo:** Adaptación fluida desktop → móvil. Layout que se reorganiza dinámicamente sin perder funcionalidad.
 - **Bento Grid Layout:** Panel de telemetría modular con tarjetas independientes (Estadísticas en vivo, Controles, Consola).
-- **Modo Cine (Expand/Reduce):** Interfaz secundaria colapsable para maximizar viewport de simulación.
 - **Visualización en Canvas 2D:** Renderizado directo sin depender de librerías gráficas.
-- **Sistema de Logs Táctil:** Consola de eventos con timestamps, colores contextuales y auto-scroll.
+- **Sistema de Logs Táctil:** Consola de eventos con timestamps, colores contextuales.
 
 ### ⚙️ Motor de Simulación
 
@@ -46,7 +45,7 @@
 - **Frontend:** React 19.2.4 (Hook-based components)
 - **Lenguaje:** TypeScript 5.8+ (compilación segura de tipos)
 - **Build Tool:** Vite 6.2.0 (desarrollo ultrarrápido + bundling optimizado)
-- **Styling:** Tailwind CSS 3 (utility-first + custom theme)
+- **Styling:** Tailwind CSS 4 (utility-first + custom theme)
 - **Iconografía:** Lucide React 0.574.0 (SVG icons ligeros)
 - **Lógica:** Vanilla TypeScript (cero dependencias externas para el motor)
 
@@ -91,7 +90,7 @@ npm install
 npm run dev
 ```
 
-Se abrirá automáticamente en `http://localhost:5173` con Hot Module Replacement (HMR).
+Se abrirá automáticamente en `http://localhost:3000` con Hot Module Replacement (HMR).
 
 ### 4. Compilación para Producción
 
@@ -117,19 +116,37 @@ GenetixArenaWeb/
 ├── index.html                    # Punto de entrada. SPA con Tailwind CDN.
 ├── index.tsx                     # ReactDOM root mount.
 ├── index.css                     # Estilos globales.
+├── favicon.svg                   # Favicon de la web.
 │
 ├── App.tsx                       # Componente principal. Maneja game loop y estado global.
 ├── types.ts                      # Definiciones de tipos TypeScript.
 │
+├── documentation/
+│   ├── CHANGELOG_Y_QUICK_START.md
+│   ├── DOCUMENTACIÓN_v3.5.md
+│   └── GUÍA_ARQUITECTURA.md
+│
 ├── components/
 │   ├── LandingPage.tsx          # Página de inicio con modales informativos.
+│   ├── StatsDisplay.tsx         # Panel de estadísticas.
+│   ├── RetroLCD.tsx             # Display LCD.
 │   ├── ControlPanel.tsx         # Panel de control (sliders, toggles, botones).
 │   └── ConsoleLog.tsx           # Consola de logs en tiempo real.
 │
 ├── services/
 │   └── GenetixEngine.ts         # Motor de simulación (todas las clases de IA).
 │
+├── public/tracks
+│   ├── AlliesWinTrack.mp3
+│   ├── BattleTrack.mp3
+│   ├── DrawTrack.mp3
+│   ├── EnemiesWinTrack.mp3
+│   └── LandingTrack.mp3
+│
+├── metadata.json                # Metadatos del proyecto.
+├── packagelock.json             # Versiones de dependencias instaladas.
 ├── package.json                 # Dependencias y scripts.
+├── eslint.config.js             # Configuración de ESLint.
 ├── tsconfig.json                # Configuración de TypeScript.
 ├── vite.config.ts               # Configuración de Vite.
 ├── tailwind.config.js           # Tema personalizado (colores, fuentes).
