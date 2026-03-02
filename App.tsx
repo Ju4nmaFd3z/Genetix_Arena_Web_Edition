@@ -474,6 +474,24 @@ const App: React.FC = () => {
         }
     };
 
+    const getLCDMessage = (): { msg: string; type: 'normal' | 'warning' | 'critical' | 'success' } => {
+        if (isExploding) return { msg: "CRITICAL: OMEGA SEQUENCE", type: 'critical' };
+        if (hasNukeBeenUsed && !gameResult) return { msg: "POST-DETONATION: FALLOUT", type: 'warning' };
+
+        if (gameResult === 'ALLIES_WIN') return { msg: "MISSION ACCOMPLISHED", type: 'success' };
+        if (gameResult === 'ENEMIES_WIN') return { msg: "MISSION FAILED: SIGNAL LOST", type: 'critical' };
+        if (gameResult === 'DRAW') return { msg: "STALEMATE: CEASEFIRE", type: 'warning' };
+
+        if (isRunning) {
+            if (stats.allies < 10 && stats.allies > 0) return { msg: "WARNING: ALLY CRITICAL", type: 'warning' };
+            if (stats.enemies < 10 && stats.enemies > 0) return { msg: "TARGETS NEAR ELIMINATION", type: 'success' };
+            return { msg: "COMBAT IN PROGRESS...", type: 'normal' };
+        }
+        if (hasStarted && !isRunning && !gameResult) return { msg: "SIMULATION PAUSED", type: 'warning' };
+        if (!hasStarted) return { msg: "SYSTEM READY. AWAITING INPUT.", type: 'normal' };
+        return { msg: "SYSTEM IDLE", type: 'normal' };
+    };
+
     const renderContent = () => {
         if (view === 'landing') {
             return (
@@ -761,6 +779,7 @@ const App: React.FC = () => {
                             isExploding={isExploding}
                             hasNukeBeenUsed={hasNukeBeenUsed}
                             onTriggerEmergency={handleOmegaProtocol}
+                            lcdMessage={getLCDMessage()}
                         />
                     </div>
                 </aside>

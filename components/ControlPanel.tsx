@@ -413,7 +413,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
             </div>
 
             {/* Bottom Actions: Defaults & Abort */}
-            <div className="mt-auto pt-4 border-t border-space-border flex flex-col gap-3">
+            <div className="mt-auto pt-4 pb-6 border-t border-space-border flex flex-col gap-3">
                 <button
                     onClick={() => handleProtectedAction('defaults', onSetDefaults)}
                     disabled={isRunning}
