@@ -2,7 +2,7 @@
 
 ![Version](https://img.shields.io/badge/Version-3.5--Stable-indigo)
 ![Tech](https://img.shields.io/badge/Tech-TypeScript%20%7C%20React%2019%20%7C%20Vite-blue)
-![Design](https://img.shields.io/badge/Design-SpaceX%20Tactical%20HUD-darkgreen)
+![Design](https://img.shields.io/badge/Design-Space%20Tactical%20HUD-darkgreen)
 
 > **Simulador táctico de combate autónomo con inteligencia artificial emergente.**  
 > Migración de alta fidelidad desde JavaScript vanilla a una arquitectura moderna con **TypeScript + React 19**, bajo una interfaz de grado empresarial inspirada en dashboards militares y sistemas de control de SpaceX.
