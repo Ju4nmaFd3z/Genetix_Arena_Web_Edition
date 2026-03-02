@@ -9,9 +9,9 @@ interface RetroLCDProps {
 const RetroLCD: React.FC<RetroLCDProps> = ({ message, type = 'normal', subMessage }) => {
     const [displayText, setDisplayText] = useState('');
 
-    // Typing effect — FIX: se reemplaza el patrón `prev + message.charAt(i)` por
-    // `message.slice(0, i + 1)` para evitar el bug de closure stale donde `i` ya
-    // vale 1 en el primer disparo del intervalo, saltándose siempre la primera letra.
+    // Typing effect
+    // FIX: se usa message.slice(0, i + 1) en lugar de prev + message.charAt(i) para evitar
+    // el stale closure donde `i` ya vale 1 en el primer disparo, saltándose la primera letra.
     useEffect(() => {
         setDisplayText('');
         let i = 0;
@@ -61,13 +61,15 @@ const RetroLCD: React.FC<RetroLCDProps> = ({ message, type = 'normal', subMessag
                 </div>
 
                 {/* FIX: eliminado whitespace-nowrap + overflow/text-ellipsis.
-                    break-all garantiza que no se corte aunque el contenedor sea estrecho. */}
-                <div className="font-bold text-sm min-h-[1.25rem] break-all leading-snug">
+                    Se usa break-words para que el wrap solo ocurra en espacios (no en mitad de
+                    una palabra como "INPUT"), y min-h de 2 líneas para que el componente no
+                    salte de altura cuando el texto hace wrap. */}
+                <div className="font-bold text-sm min-h-[2.5rem] break-words leading-snug">
                     {displayText}<span className="animate-pulse">_</span>
                 </div>
 
                 {subMessage && (
-                    <div className="text-[10px] opacity-80 mt-1 break-all">
+                    <div className="text-[10px] opacity-80 mt-1 break-words">
                         {subMessage}
                     </div>
                 )}
