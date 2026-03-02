@@ -14,7 +14,7 @@ const ConsoleLog: React.FC<ConsoleLogProps> = ({ logs }) => {
     }, [logs]);
 
     return (
-        <div className="bg-space-panel border border-space-border h-48 md:h-64 flex flex-col font-mono text-xs md:text-sm">
+        <div className="bg-space-panel border border-space-border h-32 md:h-64 flex flex-col font-mono text-xs md:text-sm">
             <div className="bg-space-dark px-3 py-2 border-b border-space-border flex items-center gap-2">
                 <Terminal size={14} className="text-space-accent" />
                 <span className="uppercase tracking-widest text-gray-400 text-[10px]">REGISTRO DE MISIÓN</span>

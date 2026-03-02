@@ -39,7 +39,7 @@ const RetroLCD: React.FC<RetroLCDProps> = ({ message, type = 'normal', subMessag
     const baseClasses = getColors();
 
     return (
-        <div className={`relative w-full p-3 rounded-sm border-2 font-mono text-xs uppercase tracking-widest overflow-hidden shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] ${baseClasses}`}>
+        <div className={`relative w-full h-full p-3 rounded-sm border-2 font-mono text-xs uppercase tracking-widest overflow-hidden shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] ${baseClasses}`}>
             {/* Scanlines Overlay */}
             <div
                 className="absolute inset-0 pointer-events-none opacity-10"

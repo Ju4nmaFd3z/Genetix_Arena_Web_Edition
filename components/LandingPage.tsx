@@ -213,6 +213,7 @@ const ChaseAnimation = () => {
 
 const LandingPage: React.FC<LandingPageProps> = ({ onStart, isMuted, onToggleMute }) => {
     const [activeSection, setActiveSection] = useState<SectionType>('none');
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const renderModalContent = () => {
         switch (activeSection) {
@@ -223,7 +224,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, isMuted, onToggleMut
                             <h3 className="text-xl font-bold text-white mb-1">PROTOCOLOS DE IA</h3>
                             <p className="text-sm text-gray-400">Lógica de comportamiento autónomo (Paridad 1:1 con Java Original).</p>
                         </div>
-                        <div className="grid md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4">
                             <div className="bg-space-dark p-4 border border-space-border/50 rounded">
                                 <div className="flex items-center gap-2 text-space-ally mb-2">
                                     <ShieldAlert size={18} /> <span className="font-bold text-xs tracking-widest">ALIADOS (OPS)</span>
@@ -308,7 +309,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, isMuted, onToggleMut
                             <p className="text-sm text-gray-400">Arquitectura v3.5 Stable (2026)</p>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 gap-6">
                             <div className="space-y-4">
                                 <div className="bg-space-dark p-3 rounded border border-space-border">
                                     <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-2">STACK TECNOLÓGICO</h4>
@@ -364,35 +365,47 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, isMuted, onToggleMut
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none"></div>
             <div className="absolute inset-0 bg-grid-pattern bg-[length:50px_50px] opacity-20 pointer-events-none mask-gradient"></div>
 
-            <nav className="relative z-10 flex justify-between items-center p-8 md:px-16 border-b border-space-border/30 backdrop-blur-sm">
+            <nav className="relative z-10 flex justify-between items-center p-4 md:px-16 md:py-8 border-b border-space-border/30 backdrop-blur-sm">
                 <div className="flex items-center gap-2">
                     <Cpu className="text-white" size={24} />
                     <span className="text-xl font-bold tracking-tighter text-white">GENETIX<span className="font-thin text-gray-400">ARENA</span></span>
                     <span className="text-[10px] bg-space-border px-1 py-0.5 rounded text-gray-400 ml-2">V3.5</span>
                 </div>
-                <div className="flex items-center gap-8">
-                    <div className="hidden md:flex gap-8 text-sm font-medium tracking-widest uppercase cursor-pointer">
-                        <button onClick={() => setActiveSection('mission')} className={`${activeSection === 'mission' ? 'text-space-ally' : 'text-gray-400'} hover:text-white transition-colors`}>Misión</button>
-                        <button onClick={() => setActiveSection('telemetry')} className={`${activeSection === 'telemetry' ? 'text-yellow-500' : 'text-gray-400'} hover:text-white transition-colors`}>Telemetría</button>
-                        <button onClick={() => setActiveSection('system')} className={`${activeSection === 'system' ? 'text-cyan-500' : 'text-gray-400'} hover:text-white transition-colors`}>Sistema</button>
-                    </div>
 
-                    {/* Audio Toggle Button */}
+                {/* Mobile Menu Button */}
+                <button
+                    className="md:hidden text-gray-400 hover:text-white"
+                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                >
+                    {isMenuOpen ? <X size={24} /> : <div className="space-y-1.5">
+                        <div className="w-6 h-0.5 bg-current"></div>
+                        <div className="w-6 h-0.5 bg-current"></div>
+                        <div className="w-6 h-0.5 bg-current"></div>
+                    </div>}
+                </button>
+
+                <div className={`${isMenuOpen ? 'flex' : 'hidden'} absolute top-full left-0 right-0 bg-space-black/95 border-b border-space-border p-4 flex-col gap-4 md:static md:flex md:flex-row md:bg-transparent md:border-none md:p-0 md:gap-8 text-sm font-medium tracking-widest uppercase cursor-pointer`}>
+                    <button onClick={() => { setActiveSection('mission'); setIsMenuOpen(false); }} className={`${activeSection === 'mission' ? 'text-space-ally' : 'text-gray-400'} hover:text-white transition-colors text-left md:text-center`}>Misión</button>
+                    <button onClick={() => { setActiveSection('telemetry'); setIsMenuOpen(false); }} className={`${activeSection === 'telemetry' ? 'text-yellow-500' : 'text-gray-400'} hover:text-white transition-colors text-left md:text-center`}>Telemetría</button>
+                    <button onClick={() => { setActiveSection('system'); setIsMenuOpen(false); }} className={`${activeSection === 'system' ? 'text-cyan-500' : 'text-gray-400'} hover:text-white transition-colors text-left md:text-center`}>Sistema</button>
+
+                    {/* Audio Toggle Button - Mobile: Inline text, Desktop: Icon */}
                     <button
                         onClick={onToggleMute}
-                        className={`p-2 rounded-full border border-space-border transition-all duration-300 ${isMuted ? 'text-gray-500 hover:text-white hover:border-white' : 'text-space-ally border-space-ally bg-space-ally/10'}`}
+                        className={`flex items-center gap-2 md:justify-center md:p-2 md:rounded-full md:border md:border-space-border md:transition-all md:duration-300 ${isMuted ? 'text-gray-500 hover:text-white md:hover:border-white' : 'text-space-ally md:border-space-ally md:bg-space-ally/10'}`}
                         title={isMuted ? "Activar Sonido" : "Silenciar"}
                     >
+                        <span className="md:hidden">{isMuted ? "Activar Sonido" : "Silenciar"}</span>
                         {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
                     </button>
                 </div>
             </nav>
 
-            <main className="flex-1 flex flex-col justify-center px-8 md:px-16 relative z-10">
+            <main className="flex-1 flex flex-col justify-center px-4 md:px-16 relative z-10 py-8 md:py-0">
                 {activeSection === 'none' && <ChaseAnimation />}
                 {activeSection !== 'none' ? (
                     /* Modal Overlay Content */
-                    <div className="max-w-4xl w-full mx-auto md:mx-0 bg-space-panel/90 backdrop-blur-md border border-space-border p-6 md:p-10 shadow-2xl relative min-h-[400px]">
+                    <div className="max-w-4xl w-full mx-auto md:mx-0 bg-space-panel/90 backdrop-blur-md border border-space-border p-4 md:p-10 shadow-2xl relative min-h-[400px]">
                         <button
                             onClick={() => setActiveSection('none')}
                             className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"
@@ -403,56 +416,55 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, isMuted, onToggleMut
                     </div>
                 ) : (
                     /* Default Landing Content */
-                    <div className="max-w-4xl mx-auto md:mx-0 md:max-w-[55%] animate-in fade-in duration-500">
-                        <h1 className="text-5xl md:text-9xl font-bold tracking-tighter text-white mb-6 leading-none">
+                    <div className="max-w-4xl mx-auto md:mx-0 md:max-w-[80%] lg:max-w-[60%] animate-in fade-in duration-500 text-center md:text-left">
+                        <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl xl:text-9xl font-bold tracking-tighter text-white mb-6 leading-none">
                             SIMULACIÓN <br />
                             DE BATALLA
                         </h1>
-                        <p className="text-lg md:text-xl text-gray-400 max-w-2xl font-mono mb-12 border-l-2 border-space-ally pl-6">
+                        <p className="text-base md:text-xl text-gray-400 max-w-2xl font-mono mb-8 md:mb-12 border-l-0 md:border-l-2 border-space-ally md:pl-6 mx-auto md:mx-0">
                             Sistema avanzado de red táctica v3.5. Simula combate autónomo con paridad lógica 1:1 respecto al motor original en Java.
                             Observa comportamientos emergentes, asimetría táctica y dinámicas de colisión en una interfaz de grado militar.
                         </p>
 
-                        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                        {/* Buttons Grid - Responsive Layout */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:flex lg:flex-row gap-4 w-full">
                             <button
                                 onClick={onStart}
-                                className="group bg-white text-black px-10 py-4 font-bold tracking-widest uppercase hover:bg-gray-200 transition-all flex items-center gap-3 w-full md:w-auto justify-center"
+                                className="group bg-white text-black px-6 py-4 font-bold tracking-widest uppercase hover:bg-gray-200 transition-all flex items-center justify-center gap-3 text-sm md:text-base w-full lg:w-auto whitespace-nowrap"
                             >
                                 INICIAR SISTEMA
                                 <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                             </button>
 
-                            <div className="flex gap-4 w-full md:w-auto">
-                                <a href="https://github.com/Ju4nmaFd3z/Genetix_Arena.git" target="_blank" rel="noreferrer"
-                                    className="flex-1 md:flex-none p-4 border border-space-border hover:border-white transition-colors text-gray-400 hover:text-white flex justify-center">
-                                    <span className="flex items-center gap-2 text-xs uppercase tracking-wider">
-                                        <Github size={16} /> Java Repo
-                                    </span>
-                                </a>
-                                <a href="https://github.com/Ju4nmaFd3z/Genetix_Arena_Web_Edition.git" target="_blank" rel="noreferrer"
-                                    className="flex-1 md:flex-none p-4 border border-space-border hover:border-white transition-colors text-gray-400 hover:text-white flex justify-center">
-                                    <span className="flex items-center gap-2 text-xs uppercase tracking-wider">
-                                        <Github size={16} /> Web Repo
-                                    </span>
-                                </a>
-                                <a href="https://juanma-dev-portfolio.vercel.app/" target="_blank" rel="noreferrer"
-                                    className="flex-1 md:flex-none p-4 border border-space-border hover:border-space-ally transition-colors text-gray-400 hover:text-space-ally flex justify-center">
-                                    <span className="flex items-center gap-2 text-xs uppercase tracking-wider">
-                                        <ExternalLink size={16} /> Portfolio
-                                    </span>
-                                </a>
-                            </div>
+                            <a href="https://github.com/Ju4nmaFd3z/Genetix_Arena.git" target="_blank" rel="noreferrer"
+                                className="p-4 border border-space-border hover:border-white transition-colors text-gray-400 hover:text-white flex items-center justify-center w-full lg:w-auto">
+                                <span className="flex items-center gap-2 text-xs uppercase tracking-wider whitespace-nowrap">
+                                    <Github size={16} /> Java Repo
+                                </span>
+                            </a>
+                            <a href="https://github.com/Ju4nmaFd3z/Genetix_Arena_Web_Edition.git" target="_blank" rel="noreferrer"
+                                className="p-4 border border-space-border hover:border-white transition-colors text-gray-400 hover:text-white flex items-center justify-center w-full lg:w-auto">
+                                <span className="flex items-center gap-2 text-xs uppercase tracking-wider whitespace-nowrap">
+                                    <Github size={16} /> Web Repo
+                                </span>
+                            </a>
+                            <a href="https://juanma-dev-portfolio.vercel.app/" target="_blank" rel="noreferrer"
+                                className="p-4 border border-space-border hover:border-space-ally transition-colors text-gray-400 hover:text-space-ally flex items-center justify-center w-full lg:w-auto">
+                                <span className="flex items-center gap-2 text-xs uppercase tracking-wider whitespace-nowrap">
+                                    <ExternalLink size={16} /> Portfolio
+                                </span>
+                            </a>
                         </div>
                     </div>
                 )}
             </main>
 
-            <footer className="relative z-10 border-t border-space-border/30 p-8 md:px-16 flex flex-col md:flex-row justify-between items-center text-xs text-gray-500 font-mono">
-                <div className="text-center md:text-left mb-4 md:mb-0">
+            <footer className="relative z-10 border-t border-space-border/30 p-4 md:px-16 md:py-8 flex flex-col landscape:flex-row md:flex-row justify-between items-center text-xs text-gray-500 font-mono gap-2 landscape:gap-0 md:gap-0">
+                <div className="text-center landscape:text-left md:text-left">
                     <p>ESTADO DEL SISTEMA: PERITA</p>
                     <p>VERSIÓN 3.5 STABLE (2026)</p>
                 </div>
-                <div className="text-center md:text-right">
+                <div className="text-center landscape:text-right md:text-right">
                     <p className="uppercase tracking-widest">DEV: JUANMA FDEZ</p>
                     <p>&copy; {new Date().getFullYear()} GENETIX</p>
                 </div>

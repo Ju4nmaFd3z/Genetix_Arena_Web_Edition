@@ -368,7 +368,7 @@ export class GenetixEngine {
     limpiarMuertos() {
         for (let i = this.listas.enemigos.length - 1; i >= 0; i--) {
             if (this.listas.enemigos[i].getVida() <= 0) {
-                let e = this.listas.enemigos[i];
+                const e = this.listas.enemigos[i];
                 if (this.grid[e.posY][e.posX] === e) this.grid[e.posY][e.posX] = null;
                 this.listas.efectos.push(new DeathAnim(e.posX, e.posY, 'enemigo')); // Add visual FX
 
@@ -382,7 +382,7 @@ export class GenetixEngine {
 
         for (let i = this.listas.aliados.length - 1; i >= 0; i--) {
             if (this.listas.aliados[i].getVida() <= 0) {
-                let a = this.listas.aliados[i];
+                const a = this.listas.aliados[i];
                 if (this.grid[a.posY][a.posX] === a) this.grid[a.posY][a.posX] = null;
                 this.listas.efectos.push(new DeathAnim(a.posX, a.posY, 'aliado')); // Add visual FX
 

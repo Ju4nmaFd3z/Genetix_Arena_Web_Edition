@@ -112,14 +112,111 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
 
     const isLidOpen = (isEmergencyAvailable && !isExploding && isRunning) || hasNukeBeenUsed;
 
+    const renderNukeButton = () => (
+        <div className="relative group h-full">
+            {/* Status Label */}
+            <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-gray-600 mb-2">
+                <span className="flex items-center gap-1"><Radiation size={10} /> OMEGA PROTOCOL</span>
+                <span className={hasNukeBeenUsed ? "text-gray-600 font-bold" : isEmergencyAvailable && !isExploding && isRunning ? "text-red-500 animate-pulse font-bold" : "text-gray-700"}>
+                    {hasNukeBeenUsed ? "PURGED" : isExploding ? "DETONATING..." : isEmergencyAvailable && isRunning ? "READY" : "LOCKED"}
+                </span>
+            </div>
+
+            {/* The Box Container */}
+            <div
+                className={`relative h-24 landscape:h-full md:landscape:h-24 w-full bg-black border-2 ${hasNukeBeenUsed ? 'border-gray-800' : 'border-space-border'} overflow-visible select-none ${isShaking ? 'animate-shake' : ''}`}
+                onClick={((!isEmergencyAvailable || isExploding) && isRunning) ? handleEmergencyClick : undefined}
+            >
+                {/* Hazard Stripes Frame - VISIBLE IN ALL STATES */}
+                <div className={`absolute inset-0 border-[4px] border-transparent hazard-border pointer-events-none z-0 ${hasNukeBeenUsed ? 'opacity-30' : 'opacity-20'}`}></div>
+
+                {/* The Button Itself (Inside) */}
+                <div className="absolute inset-0 flex items-center justify-center z-10">
+                    {hasNukeBeenUsed ? (
+                        /* DEPLETED STATE */
+                        <div className="w-16 h-16 rounded-full border-4 border-gray-800 bg-black flex items-center justify-center shadow-inner animate-in fade-in duration-700">
+                            <Skull size={24} className="text-gray-800" />
+                        </div>
+                    ) : (
+                        /* ACTIVE STATE */
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation(); // Prevent container click
+                                handleEmergencyClick();
+                            }}
+                            disabled={!isEmergencyAvailable || isExploding || !isRunning}
+                            className={`
+                                w-16 h-16 rounded-full shadow-[0_5px_15px_rgba(0,0,0,0.5)] border-4 border-red-900
+                                flex items-center justify-center transition-all duration-100 
+                                active:scale-90 active:shadow-none active:border-red-950
+                                ${isEmergencyAvailable && !isExploding && isRunning
+                                    ? 'bg-gradient-to-br from-red-500 to-red-700 shadow-[0_0_20px_rgba(239,68,68,0.6)] cursor-pointer hover:shadow-[0_0_30px_rgba(239,68,68,0.8)]'
+                                    : 'bg-red-950 grayscale opacity-50 cursor-not-allowed'
+                                }
+                            `}
+                        >
+                            <Radiation size={24} className={isEmergencyAvailable || isExploding ? "text-black animate-spin-slow" : "text-red-900"} />
+                        </button>
+                    )}
+                </div>
+
+                {/* THE GLASS LID */}
+                <div
+                    className={`
+                        absolute -inset-[2px] bg-white/5 backdrop-blur-[2px] border border-white/10 z-20 
+                        transition-all duration-700 ease-in-out transform origin-top
+                        flex flex-col items-center justify-center shadow-inner
+                    `}
+                    style={{
+                        transform: isLidOpen ? 'perspective(500px) rotateX(100deg) translateY(-10px)' : 'perspective(500px) rotateX(0deg)',
+                        opacity: isLidOpen ? 0.3 : 1
+                    }}
+                >
+                    {/* Lid Details */}
+                    <div className="absolute top-2 w-full flex justify-between px-2 opacity-50">
+                        <div className="w-1 h-1 bg-white rounded-full"></div>
+                        <div className="w-1 h-1 bg-white rounded-full"></div>
+                    </div>
+                    <div className="absolute bottom-2 w-full flex justify-between px-2 opacity-50">
+                        <div className="w-1 h-1 bg-white rounded-full"></div>
+                        <div className="w-1 h-1 bg-white rounded-full"></div>
+                    </div>
+
+                    <span className="text-[10px] font-bold text-white/30 border border-white/20 px-2 py-1 rounded tracking-widest uppercase text-center">
+                        IN CASE OF<br />EMERGENCY
+                    </span>
+
+                    {/* Reflection Glare */}
+                    <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/10 to-transparent pointer-events-none"></div>
+                </div>
+
+                {/* Access Denied Overlay (Feedback) */}
+                {showDenied && !hasNukeBeenUsed && (
+                    <div className="absolute inset-0 z-30 flex items-center justify-center bg-red-500/20 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="flex items-center gap-1 text-red-500 font-bold tracking-widest text-xs bg-black/80 px-2 py-1 border border-red-500">
+                            <AlertOctagon size={12} /> ACCESS DENIED
+                        </div>
+                    </div>
+                )}
+
+                {/* Used Overlay Text */}
+                {hasNukeBeenUsed && (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+                        <span className="text-gray-600 font-bold tracking-widest text-xs bg-black/50 px-2 border-y border-gray-800 -rotate-12">DISCHARGED</span>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+
     return (
-        <div className="bg-space-panel p-4 md:p-6 flex flex-col gap-6 font-mono text-sm h-full">
+        <div className="bg-gradient-to-b from-[#1a1a1a] to-black p-4 md:p-6 flex flex-col gap-6 font-mono text-sm h-full border-r border-space-border/20">
             <style>{`
                 /* Custom Range Slider Styling */
                 input[type=range]::-webkit-slider-thumb {
                     -webkit-appearance: none;
-                    height: 12px;
-                    width: 12px;
+                    height: 16px;
+                    width: 16px;
                     border-radius: 50%;
                     background: #ffffff;
                     cursor: pointer;
@@ -131,8 +228,8 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                     transform: scale(1.2);
                 }
                 input[type=range]::-moz-range-thumb {
-                    height: 12px;
-                    width: 12px;
+                    height: 16px;
+                    width: 16px;
                     border: none;
                     border-radius: 50%;
                     background: #ffffff;
@@ -182,13 +279,19 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                 }
             `}</style>
 
-            {/* Retro LCD Display */}
-            <div className="mb-2">
-                <RetroLCD
-                    message={lcdMessage?.msg || "SYSTEM OFFLINE"}
-                    type={lcdMessage?.type || 'normal'}
-                    subMessage={lcdMessage?.sub}
-                />
+            {/* Retro LCD Display & Mobile Landscape Nuke Button */}
+            <div className="mb-2 flex flex-col landscape:flex-row landscape:gap-2 landscape:items-stretch md:landscape:flex-col md:landscape:gap-0 md:landscape:items-stretch">
+                <div className="w-full landscape:flex-1 md:landscape:w-full md:landscape:flex-none">
+                    <RetroLCD
+                        message={lcdMessage?.msg || "SYSTEM OFFLINE"}
+                        type={lcdMessage?.type || 'normal'}
+                        subMessage={lcdMessage?.sub}
+                    />
+                </div>
+                {/* Nuke Button - Visible ONLY on Mobile Landscape */}
+                <div className="hidden landscape:block landscape:flex-1 md:landscape:hidden">
+                    {renderNukeButton()}
+                </div>
             </div>
 
             {/* Main Controls */}
@@ -315,99 +418,8 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                     </div>
 
                     {/* LAST RESORT - EMERGENCY PROTOCOL BUTTON */}
-                    <div className="mt-4 relative group">
-                        {/* Status Label */}
-                        <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-gray-600 mb-2">
-                            <span className="flex items-center gap-1"><Radiation size={10} /> OMEGA PROTOCOL</span>
-                            <span className={hasNukeBeenUsed ? "text-gray-600 font-bold" : isEmergencyAvailable && !isExploding && isRunning ? "text-red-500 animate-pulse font-bold" : "text-gray-700"}>
-                                {hasNukeBeenUsed ? "PURGED" : isExploding ? "DETONATING..." : isEmergencyAvailable && isRunning ? "READY" : "LOCKED"}
-                            </span>
-                        </div>
-
-                        {/* The Box Container */}
-                        <div
-                            className={`relative h-24 w-full bg-black border-2 ${hasNukeBeenUsed ? 'border-gray-800' : 'border-space-border'} overflow-visible select-none ${isShaking ? 'animate-shake' : ''}`}
-                            onClick={((!isEmergencyAvailable || isExploding) && isRunning) ? handleEmergencyClick : undefined}
-                        >
-                            {/* Hazard Stripes Frame - VISIBLE IN ALL STATES */}
-                            <div className={`absolute inset-0 border-[4px] border-transparent hazard-border pointer-events-none z-0 ${hasNukeBeenUsed ? 'opacity-30' : 'opacity-20'}`}></div>
-
-                            {/* The Button Itself (Inside) */}
-                            <div className="absolute inset-0 flex items-center justify-center z-10">
-                                {hasNukeBeenUsed ? (
-                                    /* DEPLETED STATE */
-                                    <div className="w-16 h-16 rounded-full border-4 border-gray-800 bg-black flex items-center justify-center shadow-inner animate-in fade-in duration-700">
-                                        <Skull size={24} className="text-gray-800" />
-                                    </div>
-                                ) : (
-                                    /* ACTIVE STATE */
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation(); // Prevent container click
-                                            handleEmergencyClick();
-                                        }}
-                                        disabled={!isEmergencyAvailable || isExploding || !isRunning}
-                                        className={`
-                                            w-16 h-16 rounded-full shadow-[0_5px_15px_rgba(0,0,0,0.5)] border-4 border-red-900
-                                            flex items-center justify-center transition-all duration-100 
-                                            active:scale-90 active:shadow-none active:border-red-950
-                                            ${isEmergencyAvailable && !isExploding && isRunning
-                                                ? 'bg-gradient-to-br from-red-500 to-red-700 shadow-[0_0_20px_rgba(239,68,68,0.6)] cursor-pointer hover:shadow-[0_0_30px_rgba(239,68,68,0.8)]'
-                                                : 'bg-red-950 grayscale opacity-50 cursor-not-allowed'
-                                            }
-                                        `}
-                                    >
-                                        <Radiation size={24} className={isEmergencyAvailable || isExploding ? "text-black animate-spin-slow" : "text-red-900"} />
-                                    </button>
-                                )}
-                            </div>
-
-                            {/* THE GLASS LID */}
-                            <div
-                                className={`
-                                    absolute -inset-[2px] bg-white/5 backdrop-blur-[2px] border border-white/10 z-20 
-                                    transition-all duration-700 ease-in-out transform origin-top
-                                    flex flex-col items-center justify-center shadow-inner
-                                `}
-                                style={{
-                                    transform: isLidOpen ? 'perspective(500px) rotateX(100deg) translateY(-10px)' : 'perspective(500px) rotateX(0deg)',
-                                    opacity: isLidOpen ? 0.3 : 1
-                                }}
-                            >
-                                {/* Lid Details */}
-                                <div className="absolute top-2 w-full flex justify-between px-2 opacity-50">
-                                    <div className="w-1 h-1 bg-white rounded-full"></div>
-                                    <div className="w-1 h-1 bg-white rounded-full"></div>
-                                </div>
-                                <div className="absolute bottom-2 w-full flex justify-between px-2 opacity-50">
-                                    <div className="w-1 h-1 bg-white rounded-full"></div>
-                                    <div className="w-1 h-1 bg-white rounded-full"></div>
-                                </div>
-
-                                <span className="text-[10px] font-bold text-white/30 border border-white/20 px-2 py-1 rounded tracking-widest uppercase text-center">
-                                    IN CASE OF<br />EMERGENCY
-                                </span>
-
-                                {/* Reflection Glare */}
-                                <div className="absolute top-0 left-0 w-full h-1/2 bg-gradient-to-b from-white/10 to-transparent pointer-events-none"></div>
-                            </div>
-
-                            {/* Access Denied Overlay (Feedback) */}
-                            {showDenied && !hasNukeBeenUsed && (
-                                <div className="absolute inset-0 z-30 flex items-center justify-center bg-red-500/20 backdrop-blur-sm animate-in fade-in duration-200">
-                                    <div className="flex items-center gap-1 text-red-500 font-bold tracking-widest text-xs bg-black/80 px-2 py-1 border border-red-500">
-                                        <AlertOctagon size={12} /> ACCESS DENIED
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Used Overlay Text */}
-                            {hasNukeBeenUsed && (
-                                <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-                                    <span className="text-gray-600 font-bold tracking-widest text-xs bg-black/50 px-2 border-y border-gray-800 -rotate-12">DISCHARGED</span>
-                                </div>
-                            )}
-                        </div>
+                    <div className="mt-4 landscape:hidden md:landscape:block">
+                        {renderNukeButton()}
                     </div>
                 </div>
             </div>
