@@ -1,4 +1,4 @@
-import { Entity, GameConfig } from "../types";
+import { Entity, GameConfig, DetailedStats } from "../types";
 
 // --- CORE CLASSES ---
 
@@ -6,11 +6,13 @@ class Entidad implements Entity {
     posX: number;
     posY: number;
     vida: number;
+    creationTick: number;
 
-    constructor(x: number, y: number) {
+    constructor(x: number, y: number, creationTick: number = 0) {
         this.posX = x;
         this.posY = y;
         this.vida = 100;
+        this.creationTick = creationTick;
     }
 
     getPosX() { return this.posX; }
@@ -30,8 +32,8 @@ class Entidad implements Entity {
     }
 
     getDistancia(otraEntidad: Entity) {
-        let dx = this.posX - otraEntidad.getPosX();
-        let dy = this.posY - otraEntidad.getPosY();
+        const dx = this.posX - otraEntidad.getPosX();
+        const dy = this.posY - otraEntidad.getPosY();
         return Math.sqrt(dx * dx + dy * dy);
     }
 }
@@ -43,8 +45,8 @@ class Aliado extends Entidad {
         let enemigo: Enemigo | null = null;
         let distanciaMinima = Number.MAX_VALUE;
 
-        for (let e of listaEnemigos) {
-            let d = this.getDistancia(e);
+        for (const e of listaEnemigos) {
+            const d = this.getDistancia(e);
             if (d < distanciaMinima) {
                 distanciaMinima = d;
                 enemigo = e;
@@ -62,12 +64,12 @@ class Aliado extends Entidad {
         const DIRECCION_X = [-1, 0, 1, -1, 1, -1, 0, 1];
 
         for (let i = 0; i < 8; i++) {
-            let nuevaX = this.getPosX() + DIRECCION_X[i];
-            let nuevaY = this.getPosY() + DIRECCION_Y[i];
+            const nuevaX = this.getPosX() + DIRECCION_X[i];
+            const nuevaY = this.getPosY() + DIRECCION_Y[i];
 
             if (MisFunciones.posicionValida(nuevaX, nuevaY, ALTO, ANCHO, grid)) {
-                let posicionPrueba = new Entidad(nuevaX, nuevaY);
-                let distancia = posicionPrueba.getDistancia(enemigo);
+                const posicionPrueba = new Entidad(nuevaX, nuevaY);
+                const distancia = posicionPrueba.getDistancia(enemigo);
 
                 if (distancia > mejorDistanciaAlEjarse) {
                     mejorDistanciaAlEjarse = distancia;
@@ -91,8 +93,8 @@ class Enemigo extends Entidad {
         let objetivo: Aliado | null = null;
         let distanciaMinima = Number.MAX_VALUE;
 
-        for (let a of listaAliados) {
-            let d = this.getDistancia(a);
+        for (const a of listaAliados) {
+            const d = this.getDistancia(a);
             if (d < distanciaMinima) {
                 distanciaMinima = d;
                 objetivo = a;
@@ -109,12 +111,12 @@ class Enemigo extends Entidad {
         const DIRECCION_X = [-1, 0, 1, -1, 1, -1, 0, 1];
 
         for (let i = 0; i < 8; i++) {
-            let nuevaX = this.getPosX() + DIRECCION_X[i];
-            let nuevaY = this.getPosY() + DIRECCION_Y[i];
+            const nuevaX = this.getPosX() + DIRECCION_X[i];
+            const nuevaY = this.getPosY() + DIRECCION_Y[i];
 
             if (MisFunciones.posicionValida(nuevaX, nuevaY, ALTO, ANCHO, grid)) {
-                let posicionPrueba = new Entidad(nuevaX, nuevaY);
-                let distancia = posicionPrueba.getDistancia(objetivo);
+                const posicionPrueba = new Entidad(nuevaX, nuevaY);
+                const distancia = posicionPrueba.getDistancia(objetivo);
 
                 if (distancia < mayorDistancia) {
                     mayorDistancia = distancia;
@@ -134,13 +136,13 @@ class Enemigo extends Entidad {
 }
 
 class Curandero extends Entidad {
-    Cura(listaAliados: Aliado[], ALTO: number, ANCHO: number, grid: (Entity | null)[][]) {
+    Cura(listaAliados: Aliado[], ALTO: number, ANCHO: number, grid: (Entity | null)[][], onHeal: (amount: number) => void) {
         let aliadoMasHerido: Aliado | null = null;
         let menorVida = Number.MAX_VALUE;
         let distanciaAliadoMasHerido = Number.MAX_VALUE;
 
-        for (let aliado of listaAliados) {
-            let distancia = this.getDistancia(aliado);
+        for (const aliado of listaAliados) {
+            const distancia = this.getDistancia(aliado);
             // Prefer ally with lowest HP within range; on HP tie, prefer the closer one
             if (distancia <= 10 && (
                 aliado.getVida() < menorVida ||
@@ -155,7 +157,10 @@ class Curandero extends Entidad {
         if (aliadoMasHerido === null) return;
 
         if (distanciaAliadoMasHerido <= 1) {
+            const oldHp = aliadoMasHerido.getVida();
             aliadoMasHerido.modificarVida(50);
+            const healed = aliadoMasHerido.getVida() - oldHp;
+            if (healed > 0) onHeal(healed);
             return;
         }
 
@@ -168,12 +173,12 @@ class Curandero extends Entidad {
         const DIRECCION_X = [-1, 0, 1, -1, 1, -1, 0, 1];
 
         for (let i = 0; i < 8; i++) {
-            let nuevaX = this.getPosX() + DIRECCION_X[i];
-            let nuevaY = this.getPosY() + DIRECCION_Y[i];
+            const nuevaX = this.getPosX() + DIRECCION_X[i];
+            const nuevaY = this.getPosY() + DIRECCION_Y[i];
 
             if (MisFunciones.posicionValida(nuevaX, nuevaY, ALTO, ANCHO, grid)) {
-                let posicionPrueba = new Entidad(nuevaX, nuevaY);
-                let distancia = posicionPrueba.getDistancia(aliadoMasHerido);
+                const posicionPrueba = new Entidad(nuevaX, nuevaY);
+                const distancia = posicionPrueba.getDistancia(aliadoMasHerido);
 
                 if (distancia < menorDistanciaAlAliado) {
                     menorDistanciaAlAliado = distancia;
@@ -218,46 +223,6 @@ const MisFunciones = {
             return false;
         }
         return true;
-    },
-
-    detectarYResolverColisiones: (listaEnemigos: Enemigo[], listaAliados: Aliado[]) => {
-        let evento = null;
-
-        for (let enemigo of listaEnemigos) {
-            for (let aliado of listaAliados) {
-                let diferenciaX = Math.abs(enemigo.getPosX() - aliado.getPosX());
-                let diferenciaY = Math.abs(enemigo.getPosY() - aliado.getPosY());
-
-                if ((diferenciaX === 0 && diferenciaY === 0) ||
-                    (diferenciaX <= 1 && diferenciaY <= 1 && (diferenciaX + diferenciaY) <= 2)) {
-
-                    enemigo.modificarVida(-25);
-                    aliado.modificarVida(-35);
-                    evento = "Hostiles atacando fuerzas aliadas. Daño recibido.";
-                }
-            }
-        }
-        return evento;
-    },
-
-    limpiarMuertos: (listaEnemigos: Enemigo[], listaAliados: Aliado[], grid: (Entity | null)[][], listaEfectos: DeathAnim[]) => {
-        for (let i = listaEnemigos.length - 1; i >= 0; i--) {
-            if (listaEnemigos[i].getVida() <= 0) {
-                let e = listaEnemigos[i];
-                if (grid[e.posY][e.posX] === e) grid[e.posY][e.posX] = null;
-                listaEfectos.push(new DeathAnim(e.posX, e.posY, 'enemigo')); // Add visual FX
-                listaEnemigos.splice(i, 1);
-            }
-        }
-
-        for (let i = listaAliados.length - 1; i >= 0; i--) {
-            if (listaAliados[i].getVida() <= 0) {
-                let a = listaAliados[i];
-                if (grid[a.posY][a.posX] === a) grid[a.posY][a.posX] = null;
-                listaEfectos.push(new DeathAnim(a.posX, a.posY, 'aliado')); // Add visual FX
-                listaAliados.splice(i, 1);
-            }
-        }
     }
 };
 
@@ -271,6 +236,17 @@ export class GenetixEngine {
     // Radiation mechanics
     falloutTicks = 0;
     MAX_FALLOUT = 40; // approx 8-10 seconds at 200ms
+
+    // Stats Tracking
+    currentTick = 0;
+    totalAllyLifespan = 0;
+    deadAlliesCount = 0;
+    totalEnemyLifespan = 0;
+    deadEnemiesCount = 0;
+    damageDealtAllies = 0;
+    damageDealtEnemies = 0;
+    healingDone = 0;
+    initialAllyCount = 0;
 
     grid: (Entity | null)[][] = [];
     listas = {
@@ -295,26 +271,36 @@ export class GenetixEngine {
             efectos: []
         };
         this.falloutTicks = 0;
+        this.currentTick = 0;
+        this.totalAllyLifespan = 0;
+        this.deadAlliesCount = 0;
+        this.totalEnemyLifespan = 0;
+        this.deadEnemiesCount = 0;
+        this.damageDealtAllies = 0;
+        this.damageDealtEnemies = 0;
+        this.healingDone = 0;
+        this.initialAllyCount = 0;
     }
 
     init(config: GameConfig) {
         this.reset();
+        this.initialAllyCount = config.entityCounts.allies;
         this.spawnEntities(Obstaculo, config.entityCounts.obstacles, this.listas.obstaculos);
         this.spawnEntities(Enemigo, config.entityCounts.enemies, this.listas.enemigos);
         this.spawnEntities(Aliado, config.entityCounts.allies, this.listas.aliados);
         this.spawnEntities(Curandero, config.entityCounts.healers, this.listas.curanderos);
     }
 
-    spawnEntities<T extends Entidad>(Clase: new (x: number, y: number) => T, cantidad: number, listaDestino: T[]) {
+    spawnEntities<T extends Entidad>(Clase: new (x: number, y: number, tick: number) => T, cantidad: number, listaDestino: T[]) {
         let count = 0;
         let attempts = 0;
         while (count < cantidad && attempts < 10000) {
             attempts++;
-            let x = Math.floor(Math.random() * this.ANCHO);
-            let y = Math.floor(Math.random() * this.ALTO);
+            const x = Math.floor(Math.random() * this.ANCHO);
+            const y = Math.floor(Math.random() * this.ALTO);
 
             if (this.grid[y][x] === null) {
-                let entidad = new Clase(x, y);
+                const entidad = new Clase(x, y, this.currentTick);
                 listaDestino.push(entidad);
                 this.grid[y][x] = entidad;
                 count++;
@@ -325,7 +311,11 @@ export class GenetixEngine {
     // New Mechanic: Omega Protocol
     executeOmegaProtocol(): string[] {
         // 1. Heal all remaining allies
-        this.listas.aliados.forEach(a => a.setVida(100));
+        this.listas.aliados.forEach(a => {
+            const oldHp = a.getVida();
+            a.setVida(100);
+            this.healingDone += (100 - oldHp);
+        });
 
         // 2. Destroy 80% of enemies
         const totalEnemies = this.listas.enemigos.length;
@@ -343,7 +333,7 @@ export class GenetixEngine {
         this.falloutTicks = this.MAX_FALLOUT;
 
         // Clean up immediately
-        MisFunciones.limpiarMuertos(this.listas.enemigos, this.listas.aliados, this.grid, this.listas.efectos);
+        this.limpiarMuertos();
 
         return [
             `PROTOCOLO OMEGA EJECUTADO. ${toDestroy} HOSTILES ELIMINADOS. PRECAUCIÓN: NIEBLA RADIACTIVA.`,
@@ -351,7 +341,62 @@ export class GenetixEngine {
         ];
     }
 
+    detectarYResolverColisiones(): string | null {
+        let evento = null;
+
+        for (const enemigo of this.listas.enemigos) {
+            for (const aliado of this.listas.aliados) {
+                const diferenciaX = Math.abs(enemigo.getPosX() - aliado.getPosX());
+                const diferenciaY = Math.abs(enemigo.getPosY() - aliado.getPosY());
+
+                if ((diferenciaX === 0 && diferenciaY === 0) ||
+                    (diferenciaX <= 1 && diferenciaY <= 1 && (diferenciaX + diferenciaY) <= 2)) {
+
+                    enemigo.modificarVida(-25);
+                    this.damageDealtAllies += 25;
+
+                    aliado.modificarVida(-35);
+                    this.damageDealtEnemies += 35;
+
+                    evento = "Hostiles atacando fuerzas aliadas. Daño recibido.";
+                }
+            }
+        }
+        return evento;
+    }
+
+    limpiarMuertos() {
+        for (let i = this.listas.enemigos.length - 1; i >= 0; i--) {
+            if (this.listas.enemigos[i].getVida() <= 0) {
+                let e = this.listas.enemigos[i];
+                if (this.grid[e.posY][e.posX] === e) this.grid[e.posY][e.posX] = null;
+                this.listas.efectos.push(new DeathAnim(e.posX, e.posY, 'enemigo')); // Add visual FX
+
+                // Stats
+                this.deadEnemiesCount++;
+                this.totalEnemyLifespan += (this.currentTick - e.creationTick);
+
+                this.listas.enemigos.splice(i, 1);
+            }
+        }
+
+        for (let i = this.listas.aliados.length - 1; i >= 0; i--) {
+            if (this.listas.aliados[i].getVida() <= 0) {
+                let a = this.listas.aliados[i];
+                if (this.grid[a.posY][a.posX] === a) this.grid[a.posY][a.posX] = null;
+                this.listas.efectos.push(new DeathAnim(a.posX, a.posY, 'aliado')); // Add visual FX
+
+                // Stats
+                this.deadAlliesCount++;
+                this.totalAllyLifespan += (this.currentTick - a.creationTick);
+
+                this.listas.aliados.splice(i, 1);
+            }
+        }
+    }
+
     update(): string | null {
+        this.currentTick++;
         let evento: string | null = null;
 
         // Process Death Effects (Update Ticks)
@@ -371,7 +416,10 @@ export class GenetixEngine {
             if (Math.random() > 0.3) {
                 this.listas.enemigos.forEach(e => {
                     // Each enemy takes -5 HP
-                    if (Math.random() > 0.4) e.modificarVida(-5);
+                    if (Math.random() > 0.4) {
+                        e.modificarVida(-5);
+                        this.damageDealtAllies += 5; // Count radiation as ally damage (system damage)
+                    }
                 });
             }
 
@@ -379,7 +427,10 @@ export class GenetixEngine {
             // 30% chance per tick to damage allies (Lower than before)
             if (Math.random() > 0.7) {
                 this.listas.aliados.forEach(a => {
-                    if (Math.random() > 0.7) a.modificarVida(-1);
+                    if (Math.random() > 0.7) {
+                        a.modificarVida(-1);
+                        this.damageDealtEnemies += 1; // Count as environmental damage against allies
+                    }
                 });
             }
 
@@ -389,7 +440,7 @@ export class GenetixEngine {
         }
 
         // 1. Enemigos persiguen
-        for (let e of this.listas.enemigos) {
+        for (const e of this.listas.enemigos) {
             // Radiation Slowdown: Enemies struggle to move in fog
             // 60% chance to skip turn if fallout is active
             if (this.falloutTicks > 0 && Math.random() < 0.6) continue;
@@ -398,21 +449,23 @@ export class GenetixEngine {
         }
 
         // 2. Aliados escapan
-        for (let a of this.listas.aliados) {
+        for (const a of this.listas.aliados) {
             a.Escapa(this.listas.enemigos, this.ALTO, this.ANCHO, this.grid);
         }
 
         // 3. Curanderos curan
-        for (let c of this.listas.curanderos) {
-            c.Cura(this.listas.aliados, this.ALTO, this.ANCHO, this.grid);
+        for (const c of this.listas.curanderos) {
+            c.Cura(this.listas.aliados, this.ALTO, this.ANCHO, this.grid, (amount) => {
+                this.healingDone += amount;
+            });
         }
 
         // 4. Colisiones
-        let eventoColision = MisFunciones.detectarYResolverColisiones(this.listas.enemigos, this.listas.aliados);
+        const eventoColision = this.detectarYResolverColisiones();
         if (eventoColision) evento = eventoColision;
 
         // 5. Limpiar Muertos (This triggers new DeathAnims)
-        MisFunciones.limpiarMuertos(this.listas.enemigos, this.listas.aliados, this.grid, this.listas.efectos);
+        this.limpiarMuertos();
 
         return evento;
     }
@@ -430,8 +483,8 @@ export class GenetixEngine {
 
         // --- DRAW DEATH EFFECTS (Updated for Elegance) ---
         this.listas.efectos.forEach(fx => {
-            let cx = fx.x * this.CELL_SIZE + (this.CELL_SIZE / 2);
-            let cy = fx.y * this.CELL_SIZE + (this.CELL_SIZE / 2);
+            const cx = fx.x * this.CELL_SIZE + (this.CELL_SIZE / 2);
+            const cy = fx.y * this.CELL_SIZE + (this.CELL_SIZE / 2);
             const progress = fx.tick / fx.maxTicks; // 0.0 to 1.0
             const easeOut = 1 - Math.pow(1 - progress, 3); // Cubic ease out for smooth motion
 
@@ -510,8 +563,8 @@ export class GenetixEngine {
 
         const drawEntity = (entidad: Entity, color: string, type: string) => {
             // Calculate center of the cell for geometric drawing
-            let cx = entidad.getPosX() * this.CELL_SIZE + (this.CELL_SIZE / 2);
-            let cy = entidad.getPosY() * this.CELL_SIZE + (this.CELL_SIZE / 2);
+            const cx = entidad.getPosX() * this.CELL_SIZE + (this.CELL_SIZE / 2);
+            const cy = entidad.getPosY() * this.CELL_SIZE + (this.CELL_SIZE / 2);
 
             ctx.shadowBlur = 0;
             ctx.lineJoin = 'round';
@@ -659,6 +712,29 @@ export class GenetixEngine {
             enemies: this.listas.enemigos.length,
             healers: this.listas.curanderos.length,
             obstacles: this.listas.obstaculos.length
+        };
+    }
+
+    getDetailedStats(): DetailedStats {
+        const avgAllyLifespan = this.deadAlliesCount > 0
+            ? (this.totalAllyLifespan / this.deadAlliesCount).toFixed(1)
+            : "N/A";
+
+        const avgEnemyLifespan = this.deadEnemiesCount > 0
+            ? (this.totalEnemyLifespan / this.deadEnemiesCount).toFixed(1)
+            : "N/A";
+
+        const survivalRate = this.initialAllyCount > 0
+            ? ((this.listas.aliados.length / this.initialAllyCount) * 100).toFixed(1) + "%"
+            : "0%";
+
+        return {
+            averageAllyLifespan: avgAllyLifespan,
+            averageEnemyLifespan: avgEnemyLifespan,
+            totalDamageDealtByAllies: this.damageDealtAllies,
+            totalDamageDealtByEnemies: this.damageDealtEnemies,
+            totalHealingDone: this.healingDone,
+            survivalRate: survivalRate
         };
     }
 

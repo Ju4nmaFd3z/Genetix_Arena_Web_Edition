@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { GameConfig } from '../types';
 import { Sliders, Activity, Eye, Play, Pause, RotateCcw, Power, Undo2, LogOut, Radiation, AlertOctagon, Skull, Lock } from 'lucide-react';
+import RetroLCD from './RetroLCD';
 
 interface ControlPanelProps {
     config: GameConfig;
@@ -17,9 +18,15 @@ interface ControlPanelProps {
     isExploding?: boolean;
     hasNukeBeenUsed?: boolean;
     onTriggerEmergency?: () => void;
+    lcdMessage?: { msg: string, type: 'normal' | 'warning' | 'critical' | 'success', sub?: string };
 }
 
-const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStarted, isGameOver, setConfig, onTogglePause, onReset, onStart, onSetDefaults, onAbort, isEmergencyAvailable, isExploding, hasNukeBeenUsed, onTriggerEmergency }) => {
+const ControlPanel: React.FC<ControlPanelProps> = ({
+    config, isRunning, hasStarted, isGameOver, setConfig,
+    onTogglePause, onReset, onStart, onSetDefaults, onAbort,
+    isEmergencyAvailable, isExploding, hasNukeBeenUsed, onTriggerEmergency,
+    lcdMessage
+}) => {
 
     // Local state for sliders to support update-on-release
     const [localCounts, setLocalCounts] = useState(config.entityCounts);
@@ -174,6 +181,15 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, isRunning, hasStart
                     50% { color: #ef4444; }
                 }
             `}</style>
+
+            {/* Retro LCD Display */}
+            <div className="mb-2">
+                <RetroLCD
+                    message={lcdMessage?.msg || "SYSTEM OFFLINE"}
+                    type={lcdMessage?.type || 'normal'}
+                    subMessage={lcdMessage?.sub}
+                />
+            </div>
 
             {/* Main Controls */}
             <div className="flex flex-col gap-2">

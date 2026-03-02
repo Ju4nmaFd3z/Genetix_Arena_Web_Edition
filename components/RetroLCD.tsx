@@ -1,0 +1,73 @@
+import React, { useEffect, useState } from 'react';
+
+interface RetroLCDProps {
+    message: string;
+    type?: 'normal' | 'warning' | 'critical' | 'success';
+    subMessage?: string;
+}
+
+const RetroLCD: React.FC<RetroLCDProps> = ({ message, type = 'normal', subMessage }) => {
+    const [displayText, setDisplayText] = useState('');
+
+    // Typing effect
+    useEffect(() => {
+        let i = 0;
+        setDisplayText('');
+        const timer = setInterval(() => {
+            if (i < message.length) {
+                setDisplayText(prev => prev + message.charAt(i));
+                i++;
+            } else {
+                clearInterval(timer);
+            }
+        }, 30);
+        return () => clearInterval(timer);
+    }, [message]);
+
+    // Color mapping
+    const getColors = () => {
+        switch (type) {
+            case 'critical': return 'text-red-500 bg-red-950/30 border-red-900/50';
+            case 'warning': return 'text-yellow-500 bg-yellow-950/30 border-yellow-900/50';
+            case 'success': return 'text-emerald-400 bg-emerald-950/30 border-emerald-900/50';
+            default: return 'text-[#33ff00] bg-[#002200] border-[#004400]';
+        }
+    };
+
+    const baseClasses = getColors();
+
+    return (
+        <div className={`relative w-full p-3 rounded-sm border-2 font-mono text-xs uppercase tracking-widest overflow-hidden shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] ${baseClasses}`}>
+            {/* Scanlines Overlay */}
+            <div className="absolute inset-0 pointer-events-none opacity-10"
+                style={{
+                    backgroundImage: 'linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06))',
+                    backgroundSize: '100% 2px, 3px 100%'
+                }}
+            />
+
+            {/* Glow Effect */}
+            <div className={`absolute inset-0 pointer-events-none opacity-20 blur-md ${type === 'critical' ? 'bg-red-500' : 'bg-green-500'}`}></div>
+
+            {/* Content */}
+            <div className="relative z-10 flex flex-col gap-1">
+                <div className="flex justify-between items-center border-b border-white/10 pb-1 mb-1 opacity-70 text-[10px]">
+                    <span>SYS.STATUS</span>
+                    <span className="animate-pulse">{type === 'critical' ? '!!!' : 'OK'}</span>
+                </div>
+
+                <div className="font-bold text-sm min-h-[1.25rem] whitespace-nowrap overflow-hidden text-ellipsis">
+                    {displayText}<span className="animate-pulse">_</span>
+                </div>
+
+                {subMessage && (
+                    <div className="text-[10px] opacity-80 mt-1 truncate">
+                        {subMessage}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+export default RetroLCD;

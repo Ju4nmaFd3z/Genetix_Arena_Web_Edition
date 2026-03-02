@@ -3,8 +3,9 @@ import LandingPage from './components/LandingPage';
 import ControlPanel from './components/ControlPanel';
 import ConsoleLog from './components/ConsoleLog';
 import { GenetixEngine } from './services/GenetixEngine';
-import { GameConfig, GameStats, LogEntry } from './types';
-import { Heart, ShieldAlert, Cross, Box, Trophy, AlertTriangle, RefreshCw, Activity, CheckCircle2, XCircle, Radiation, Target, Crosshair } from 'lucide-react';
+import { GameConfig, GameStats, LogEntry, DetailedStats } from './types';
+import { Heart, ShieldAlert, Cross, Box, AlertTriangle, Activity, CheckCircle2, XCircle, Crosshair, BarChart2, X } from 'lucide-react';
+import StatsDisplay from './components/StatsDisplay';
 
 // Default Config
 const DEFAULT_CONFIG: GameConfig = {
@@ -27,6 +28,8 @@ const App: React.FC = () => {
     const [opacity, setOpacity] = useState(1); // State for transition opacity
     const [config, setConfig] = useState<GameConfig>(DEFAULT_CONFIG);
     const [stats, setStats] = useState<GameStats>({ allies: 0, enemies: 0, healers: 0, obstacles: 0 });
+    const [detailedStats, setDetailedStats] = useState<DetailedStats | null>(null);
+    const [showStatsModal, setShowStatsModal] = useState(false);
     const [logs, setLogs] = useState<LogEntry[]>([]);
 
     // States for logic
@@ -100,6 +103,7 @@ const App: React.FC = () => {
     const initializeSystem = useCallback((autoTrigger = false) => {
         engineRef.current.init(config);
         setStats(engineRef.current.getStats());
+        setDetailedStats(engineRef.current.getDetailedStats());
 
         if (!autoTrigger) {
             setLogs([]); // Clear logs only on full manual reset
@@ -166,6 +170,7 @@ const App: React.FC = () => {
             if (ctx) engineRef.current.draw(ctx, config);
 
             setStats(engineRef.current.getStats());
+            setDetailedStats(engineRef.current.getDetailedStats());
             setShowFalloutGrain(true);
 
             // Log messages
@@ -228,11 +233,13 @@ const App: React.FC = () => {
                 addLog(`SIMULACIÓN FINALIZADA. RESULTADO: ${result}`, 'system');
                 engine.draw(ctx, config);
                 setStats(engine.getStats());
+                setDetailedStats(engine.getDetailedStats());
                 return; // ← Corta aquí, no agenda el siguiente frame
             }
 
             engine.draw(ctx, config);
             setStats(engine.getStats());
+            setDetailedStats(engine.getDetailedStats());
             lastTickRef.current = timestamp;
         }
 
@@ -267,7 +274,8 @@ const App: React.FC = () => {
             [landingAudioRef, gameAudioRef, alliesWinAudioRef, enemiesWinAudioRef, drawAudioRef]
                 .forEach(r => r.current?.pause());
         };
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps — Las referencias de audio son estables (useRef). Incluirlas causaría reinicializar el sistema de audio en cada render.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // [AUDIO SYSTEM] - Cancela el fade activo (si lo hay)
     const stopFade = () => {
@@ -368,8 +376,18 @@ const App: React.FC = () => {
         const outgoingDefVol = view === 'landing' ? VOL.battle : VOL.landing;
 
         if (!incoming || !outgoing) return;
+
+        // Parar pistas de resultado antes del crossfade — evita solapamiento al abortar
+        // desde la tarjeta de victoria/empate o al volver al menú con resultado activo
+        stopFade();
+        [alliesWinAudioRef, enemiesWinAudioRef, drawAudioRef].forEach(r => {
+            r.current?.pause();
+            if (r.current) { r.current.currentTime = 0; r.current.volume = VOL.result; }
+        });
+
         crossfade(outgoing, outgoingDefVol, incoming, incomingVol);
-    }, [view]); // eslint-disable-line react-hooks/exhaustive-deps — crossfade y VOL son funciones/constantes estables declaradas fuera del ciclo de render. Incluir crossfade causaría un bucle infinito.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [view]);
 
     // [AUDIO SYSTEM] - Pista de resultado: crossfade al aparecer tarjeta / limpieza al reiniciar
     useEffect(() => {
@@ -404,7 +422,8 @@ const App: React.FC = () => {
                 if (view === 'game') gameAudioRef.current.play().catch(() => { });
             }
         }
-    }, [gameResult]); // eslint-disable-line react-hooks/exhaustive-deps — isMuted y view se leen como valores puntuales al dispararse el efecto, no como dependencias reactivas. Incluirlos causaría crossfades no deseados al pausar o cambiar vista.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [gameResult]);
 
     // React to running state
     useEffect(() => {
@@ -491,6 +510,24 @@ const App: React.FC = () => {
         }
     };
 
+
+    const getLCDMessage = () => {
+        if (isExploding) return { msg: "CRITICAL: OMEGA SEQUENCE", type: 'critical' as const };
+        if (hasNukeBeenUsed && !gameResult) return { msg: "POST-DETONATION: FALLOUT", type: 'warning' as const };
+
+        if (gameResult === 'ALLIES_WIN') return { msg: "MISSION ACCOMPLISHED", type: 'success' as const };
+        if (gameResult === 'ENEMIES_WIN') return { msg: "MISSION FAILED: SIGNAL LOST", type: 'critical' as const };
+        if (gameResult === 'DRAW') return { msg: "STALEMATE: CEASEFIRE", type: 'warning' as const };
+
+        if (isRunning) {
+            if (stats.allies < 10 && stats.allies > 0) return { msg: "WARNING: ALLY CRITICAL", type: 'warning' as const };
+            if (stats.enemies < 10 && stats.enemies > 0) return { msg: "TARGETS NEAR ELIMINATION", type: 'success' as const };
+            return { msg: "COMBAT IN PROGRESS...", type: 'normal' as const };
+        }
+        if (hasStarted && !isRunning && !gameResult) return { msg: "SIMULATION PAUSED", type: 'warning' as const };
+        if (!hasStarted) return { msg: "SYSTEM READY. AWAITING INPUT.", type: 'normal' as const };
+        return { msg: "SYSTEM IDLE", type: 'normal' as const };
+    };
 
     const renderContent = () => {
         if (view === 'landing') {
@@ -688,16 +725,57 @@ const App: React.FC = () => {
                                             Ciclo de simulación completado
                                         </p>
 
-                                        {/* Stats Report Grid */}
-                                        <div className="grid grid-cols-2 gap-px bg-space-border w-full border border-space-border">
-                                            <div className="bg-space-dark p-3">
-                                                <div className="text-[10px] text-gray-500 uppercase mb-1">Supervivientes</div>
-                                                <div className="text-xl font-mono text-space-ally">{stats.allies}</div>
+                                        {/* Stats Report — layout compacto para caber en la tarjeta */}
+                                        <div className="w-full space-y-px">
+                                            {/* Fila 1: Supervivientes / Hostiles */}
+                                            <div className="grid grid-cols-2 gap-px bg-space-border">
+                                                <div className="bg-space-dark p-2 flex flex-col">
+                                                    <span className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Supervivientes</span>
+                                                    <span className="text-lg font-mono text-space-ally leading-none">{stats.allies}</span>
+                                                </div>
+                                                <div className="bg-space-dark p-2 flex flex-col">
+                                                    <span className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Hostiles Rest.</span>
+                                                    <span className="text-lg font-mono text-space-enemy leading-none">{stats.enemies}</span>
+                                                </div>
                                             </div>
-                                            <div className="bg-space-dark p-3">
-                                                <div className="text-[10px] text-gray-500 uppercase mb-1">Hostiles Rest.</div>
-                                                <div className="text-xl font-mono text-space-enemy">{stats.enemies}</div>
-                                            </div>
+
+                                            {detailedStats && (<>
+                                                {/* Fila 2: Supervivencia / Curación */}
+                                                <div className="grid grid-cols-2 gap-px bg-space-border">
+                                                    <div className="bg-space-dark p-2 flex flex-col">
+                                                        <span className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Supervivencia</span>
+                                                        <span className="text-base font-mono text-white leading-none">{detailedStats.survivalRate}</span>
+                                                    </div>
+                                                    <div className="bg-space-dark p-2 flex flex-col">
+                                                        <span className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Curación</span>
+                                                        <span className="text-base font-mono text-space-healer leading-none">{detailedStats.totalHealingDone.toLocaleString()} <span className="text-[9px] text-gray-600">HP</span></span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Fila 3: Vida media */}
+                                                <div className="grid grid-cols-2 gap-px bg-space-border">
+                                                    <div className="bg-space-dark p-2 flex flex-col">
+                                                        <span className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Vida Media (Ali)</span>
+                                                        <span className="text-base font-mono text-space-ally leading-none">{detailedStats.averageAllyLifespan} <span className="text-[9px] text-gray-600">t</span></span>
+                                                    </div>
+                                                    <div className="bg-space-dark p-2 flex flex-col">
+                                                        <span className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Vida Media (Ene)</span>
+                                                        <span className="text-base font-mono text-space-enemy leading-none">{detailedStats.averageEnemyLifespan} <span className="text-[9px] text-gray-600">t</span></span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Fila 4: Daño */}
+                                                <div className="grid grid-cols-2 gap-px bg-space-border">
+                                                    <div className="bg-space-dark p-2 flex flex-col">
+                                                        <span className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Daño Infligido</span>
+                                                        <span className="text-base font-mono text-white leading-none">{detailedStats.totalDamageDealtByAllies.toLocaleString()}</span>
+                                                    </div>
+                                                    <div className="bg-space-dark p-2 flex flex-col">
+                                                        <span className="text-[9px] text-gray-500 uppercase tracking-wider mb-0.5">Daño Recibido</span>
+                                                        <span className="text-base font-mono text-white leading-none">{detailedStats.totalDamageDealtByEnemies.toLocaleString()}</span>
+                                                    </div>
+                                                </div>
+                                            </>)}
                                         </div>
                                     </div>
 
@@ -720,7 +798,16 @@ const App: React.FC = () => {
 
                     {/* Stats Header */}
                     <div className="p-2 md:p-4 border-b border-space-border bg-space-panel">
-                        <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 block mb-2 md:mb-3 text-center md:text-left">TELEMETRÍA EN VIVO</span>
+                        <div className="flex justify-between items-center mb-2 md:mb-3">
+                            <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 block text-center md:text-left">TELEMETRÍA EN VIVO</span>
+                            <button
+                                onClick={() => setShowStatsModal(true)}
+                                className="text-gray-500 hover:text-white transition-colors p-1 rounded hover:bg-white/10"
+                                title="Ver Análisis Detallado"
+                            >
+                                <BarChart2 size={14} />
+                            </button>
+                        </div>
                         <div className="grid grid-cols-4 md:grid-cols-2 gap-2">
                             {/* Stat Card */}
                             <div className="bg-space-dark p-1.5 md:p-3 border border-space-border/50 flex flex-col justify-center items-center md:items-start">
@@ -773,6 +860,7 @@ const App: React.FC = () => {
                             isExploding={isExploding}
                             hasNukeBeenUsed={hasNukeBeenUsed}
                             onTriggerEmergency={handleOmegaProtocol}
+                            lcdMessage={getLCDMessage()}
                         />
                     </div>
                 </aside>
@@ -785,6 +873,33 @@ const App: React.FC = () => {
             className="w-full h-full bg-space-black transition-opacity duration-500 ease-in-out"
             style={{ opacity: opacity }}
         >
+            {/* Detailed Stats Modal */}
+            {showStatsModal && detailedStats && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-space-panel border border-space-border w-full max-w-lg shadow-2xl relative">
+                        <div className="flex justify-between items-center p-4 border-b border-space-border bg-black/40">
+                            <div className="flex items-center gap-2 text-white">
+                                <Activity size={16} className="text-space-ally" />
+                                <span className="text-xs font-bold tracking-widest uppercase">ANÁLISIS TÁCTICO</span>
+                            </div>
+                            <button
+                                onClick={() => setShowStatsModal(false)}
+                                className="text-gray-500 hover:text-white transition-colors"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+
+                        <div className="p-6">
+                            <StatsDisplay stats={detailedStats} />
+                        </div>
+
+                        {/* Scanline */}
+                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent h-[10px] w-full animate-[scan_4s_linear_infinite] pointer-events-none opacity-20"></div>
+                    </div>
+                </div>
+            )}
+
             <style>{`
                 @keyframes scan {
                     0% { transform: translateY(-100%); }

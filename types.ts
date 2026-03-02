@@ -16,6 +16,15 @@ export interface GameStats {
     obstacles: number;
 }
 
+export interface DetailedStats {
+    averageAllyLifespan: string;
+    averageEnemyLifespan: string;
+    totalDamageDealtByAllies: number;
+    totalDamageDealtByEnemies: number;
+    totalHealingDone: number;
+    survivalRate: string;
+}
+
 export interface LogEntry {
     id: number;
     timestamp: string;
