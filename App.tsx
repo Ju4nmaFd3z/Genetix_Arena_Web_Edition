@@ -435,6 +435,8 @@ const App: React.FC = () => {
     // Handle Reset (Go back to Ready state)
     const handleReset = () => {
         setIsRunning(false);
+        setHasStarted(false);
+        setGameResult(null);
         setIsExploding(false);
         setShowFalloutGrain(false);
         setTimeout(() => {
