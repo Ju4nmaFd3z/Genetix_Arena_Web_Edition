@@ -4,9 +4,10 @@ interface RetroLCDProps {
     message: string;
     type?: 'normal' | 'warning' | 'critical' | 'success';
     subMessage?: string;
+    className?: string;
 }
 
-const RetroLCD: React.FC<RetroLCDProps> = ({ message, type = 'normal', subMessage }) => {
+const RetroLCD: React.FC<RetroLCDProps> = ({ message, type = 'normal', subMessage, className = '' }) => {
     const [displayText, setDisplayText] = useState('');
 
     useEffect(() => {
@@ -59,9 +60,9 @@ const RetroLCD: React.FC<RetroLCDProps> = ({ message, type = 'normal', subMessag
     const colors = getColors();
 
     return (
-        <div className="relative p-1 bg-[#1a1a1a] rounded-sm border-b-4 border-r-4 border-black/40 shadow-2xl">
+        <div className={`relative p-1 bg-[#1a1a1a] rounded-sm border-b-4 border-r-4 border-black/40 shadow-2xl flex flex-col ${className}`}>
             {/* Outer Bezel / Frame */}
-            <div className="relative p-3 bg-[#2a2a2a] rounded-sm border border-[#3a3a3a] shadow-inner">
+            <div className="relative p-3 bg-[#2a2a2a] rounded-sm border border-[#3a3a3a] shadow-inner flex-1">
 
                 {/* Corner Screws */}
                 <div className="absolute top-1 left-1 w-1.5 h-1.5 rounded-full bg-[#111] border border-[#444] shadow-inner flex items-center justify-center">
@@ -110,7 +111,7 @@ const RetroLCD: React.FC<RetroLCDProps> = ({ message, type = 'normal', subMessag
                         </div>
 
                         <div className="font-bold text-[11px] md:text-xs tracking-wider min-h-[1.5rem] whitespace-nowrap overflow-hidden text-ellipsis leading-snug drop-shadow-[0_0_5px_currentColor]">
-                            {displayText}<span className="animate-pulse inline-block w-2 h-3 bg-current ml-1 align-middle"></span>
+                            {displayText}<span className="animate-pulse inline-block w-2 h-[13px] bg-current ml-1 align-baseline translate-y-[2px]"></span>
                         </div>
 
                         {subMessage && (

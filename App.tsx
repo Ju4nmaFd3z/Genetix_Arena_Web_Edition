@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import LandingPage from './components/LandingPage';
 import ControlPanel from './components/ControlPanel';
 import ConsoleLog from './components/ConsoleLog';
+import SignalLossEffect from './components/SignalLossEffect';
 import { GenetixEngine } from './services/GenetixEngine';
 import { GameConfig, GameStats, LogEntry, DetailedStats } from './types';
 import { Heart, ShieldAlert, Cross, Box, AlertTriangle, Activity, Crosshair, BarChart2, X, Volume2, VolumeX, Skull } from 'lucide-react';
@@ -41,7 +42,9 @@ const App: React.FC = () => {
     // Explosion & Nuke State
     const [isExploding, setIsExploding] = useState(false);
     const [hasNukeBeenUsed, setHasNukeBeenUsed] = useState(false);
+    const [signalPhase, setSignalPhase] = useState<'idle' | 'noise' | 'dark'>('idle');
     const [targetCoordinates, setTargetCoordinates] = useState<{ x: number, y: number }[]>([]);
+    const [showResultModal, setShowResultModal] = useState(false);
 
     // Visual Fallback Tracking (Synced with engine ticks manually via loop or state)
     // We use a simple boolean here for the overlay grain, the color tint is in canvas
@@ -142,6 +145,16 @@ const App: React.FC = () => {
 
         // 3. The "Boom" moment (3.0 seconds later)
         setTimeout(() => {
+            // TRIGGER SIGNAL LOSS EFFECT
+            // Phase 1: Digital Noise / Glitch (Sensor Overload)
+            setSignalPhase('noise');
+
+            // Phase 2: Dark / Blackout (Sensor Failure) - 600ms later
+            setTimeout(() => setSignalPhase('dark'), 600);
+
+            // Phase 3: Recovery (Fade out)
+            setTimeout(() => setSignalPhase('idle'), 2500);
+
             // EXECUTE PROTOCOL FIRST (Eliminates 80%)
             const msgs = engineRef.current.executeOmegaProtocol();
 
@@ -180,6 +193,7 @@ const App: React.FC = () => {
             const result = engineRef.current.checkWin();
             if (result) {
                 setGameResult(result);
+                setShowResultModal(true);
                 setMissionId(Math.floor(Math.random() * 90000 + 10000).toString());
                 addLog(`SIMULACIÓN FINALIZADA POST-DETONACIÓN.`, 'system');
             } else {
@@ -211,6 +225,7 @@ const App: React.FC = () => {
             const result = engine.checkWin();
             if (result) {
                 setGameResult(result);
+                setShowResultModal(true);
                 setMissionId(Math.floor(Math.random() * 90000 + 10000).toString());
                 setIsRunning(false);
                 addLog(`SIMULACIÓN FINALIZADA. RESULTADO: ${result}`, 'system');
@@ -433,6 +448,7 @@ const App: React.FC = () => {
         setIsRunning(false);
         setHasStarted(false);
         setGameResult(null);
+        setShowResultModal(false);
         setIsExploding(false);
         setShowFalloutGrain(false);
         setTimeout(() => {
@@ -556,10 +572,20 @@ const App: React.FC = () => {
                         {/* Decorative Grid Background */}
                         <div className="absolute inset-0 bg-grid-pattern bg-[length:40px_40px] opacity-10 pointer-events-none"></div>
 
-                        <div ref={canvasWrapperRef} className={`
-                            relative border border-space-border shadow-2xl shadow-black bg-black w-full max-w-[98%] md:max-w-[95%] aspect-[3/1] 
-                            ${isExploding ? 'animate-omega-sequence' : 'animate-idle-drift'}
-                        `}>
+                        <div ref={canvasWrapperRef}
+                            className={`
+                                relative border border-space-border shadow-2xl shadow-black bg-black w-full max-w-[98%] md:max-w-[95%] aspect-[3/1] 
+                                ${isExploding ? 'animate-omega-sequence' : 'animate-idle-drift'}
+                             `}
+                            style={{
+                                filter: signalPhase === 'noise' ? 'url(#signal-glitch) contrast(1.4) brightness(1.3) saturate(0.8)' :
+                                    signalPhase === 'dark' ? 'url(#signal-glitch) contrast(2) brightness(0.2) grayscale(0.8)' :
+                                        'none',
+                                transition: signalPhase === 'idle' ? 'filter 1s ease-out' : 'filter 0.05s'
+                            }}
+                        >
+                            <SignalLossEffect phase={signalPhase} />
+
                             {/* Fallout Noise Grain (Controlled by React for fading) */}
                             {/* The Orange Tint is handled by Canvas draw() method for better perf/blending */}
                             <div className={`absolute inset-0 z-10 opacity-30 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] pointer-events-none transition-opacity duration-[8000ms] ease-out ${showFalloutGrain ? 'opacity-30' : 'opacity-0'}`}></div>
@@ -651,17 +677,17 @@ const App: React.FC = () => {
                                             })}
 
                                             {/* Centered Locking Text - Military Style */}
-                                            <div className="absolute bottom-4 md:bottom-8 left-0 right-0 flex justify-center items-end">
-                                                <div className="bg-black/90 border border-green-500/50 text-green-500 px-4 md:px-8 py-2 font-mono flex flex-col items-center gap-1 shadow-[0_0_15px_rgba(34,197,94,0.2)] scale-75 md:scale-100 origin-bottom">
-                                                    <div className="flex items-center gap-3 text-sm font-bold tracking-[0.2em]">
-                                                        <Crosshair className="animate-spin-slow" size={16} />
+                                            <div className="absolute bottom-4 md:bottom-8 left-0 right-0 flex justify-center items-end pointer-events-none">
+                                                <div className="bg-black/90 border border-green-500/50 text-green-500 px-3 py-1.5 md:px-8 md:py-2 font-mono flex flex-col items-center gap-1 shadow-[0_0_15px_rgba(34,197,94,0.2)] origin-bottom max-w-[90%]">
+                                                    <div className="flex items-center gap-2 md:gap-3 text-[10px] md:text-sm font-bold tracking-[0.1em] md:tracking-[0.2em]">
+                                                        <Crosshair className="animate-spin-slow w-3 h-3 md:w-4 md:h-4" />
                                                         <span>TARGET ACQUISITION</span>
-                                                        <Crosshair className="animate-spin-slow" size={16} />
+                                                        <Crosshair className="animate-spin-slow w-3 h-3 md:w-4 md:h-4" />
                                                     </div>
                                                     <div className="w-full h-[2px] bg-green-900 overflow-hidden">
                                                         <div className="h-full bg-green-500 w-full animate-[loading_2s_ease-in-out_infinite]"></div>
                                                     </div>
-                                                    <div className="text-[8px] text-green-600 tracking-widest uppercase">
+                                                    <div className="text-[6px] md:text-[8px] text-green-600 tracking-widest uppercase text-center">
                                                         Scanning sector 7-G // Threat Level: CRITICAL
                                                     </div>
                                                 </div>
@@ -671,8 +697,8 @@ const App: React.FC = () => {
 
                                     {/* 5. Warning Text - Initial Phase */}
                                     {targetCoordinates.length === 0 && (
-                                        <div className="absolute top-10 left-0 right-0 flex justify-center animate-text-lifecycle">
-                                            <div className="bg-red-600 text-black px-6 py-1 font-mono text-xl font-bold tracking-[0.5em] border-2 border-black shadow-[0_0_10px_rgba(220,38,38,0.8)] transform -skew-x-12 scale-75 md:scale-100">
+                                        <div className="absolute top-10 left-0 right-0 flex justify-center animate-text-lifecycle pointer-events-none">
+                                            <div className="bg-red-600 text-black px-4 py-1 md:px-6 font-mono text-xs sm:text-sm md:text-xl font-bold tracking-[0.2em] md:tracking-[0.5em] border-2 border-black shadow-[0_0_10px_rgba(220,38,38,0.8)] transform -skew-x-12 max-w-[90%] text-center whitespace-nowrap overflow-hidden text-ellipsis">
                                                 PROTOCOLO OMEGA INICIADO
                                             </div>
                                         </div>
@@ -775,7 +801,7 @@ const App: React.FC = () => {
                 </aside>
 
                 {/* Modal Result Overlay - MOVED HERE TO BE GLOBAL */}
-                {gameResult && resultStyles && (
+                {showResultModal && gameResult && resultStyles && (
                     <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-500 cursor-default">
                         <div className={`
                             relative bg-[#0a0b0d] border-2 ${resultStyles.borderColor} ${resultStyles.glow}
@@ -796,29 +822,30 @@ const App: React.FC = () => {
                             <div className={`h-1.5 w-full bg-gradient-to-r ${resultStyles.borderColor.replace('border-', 'from-')}/50 via-transparent to-transparent opacity-50`}></div>
 
                             {/* Modal Header */}
-                            <div className="bg-black/80 border-b border-white/5 p-5 flex justify-between items-center relative z-10">
-                                <div className="flex flex-col">
+                            <div className="bg-black/80 border-b border-white/5 p-3 md:p-5 flex justify-between items-center relative z-10 shrink-0">
+                                <div className="flex flex-col min-w-0 mr-2">
                                     <div className="flex items-center gap-2 mb-0.5">
-                                        <div className={`w-1.5 h-1.5 rounded-full ${resultStyles.textColor.replace('text-', 'bg-')} animate-pulse`}></div>
-                                        <span className="text-[10px] uppercase tracking-[0.4em] text-gray-400 font-black">DEBRIEFING_PROTOCOL_V3.5</span>
+                                        <div className={`w-1.5 h-1.5 rounded-full ${resultStyles.textColor.replace('text-', 'bg-')} animate-pulse shrink-0`}></div>
+                                        <span className="text-[9px] md:text-[10px] uppercase tracking-[0.2em] md:tracking-[0.4em] text-gray-400 font-black truncate">DEBRIEFING_PROTOCOL</span>
                                     </div>
-                                    <div className="text-[8px] text-gray-600 font-mono tracking-widest uppercase">ENCRYPTED_CHANNEL_SECURE</div>
+                                    <div className="text-[7px] md:text-[8px] text-gray-600 font-mono tracking-widest uppercase truncate">ENCRYPTED_CHANNEL_SECURE</div>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <div className="flex flex-col items-end mr-2">
+                                <div className="flex items-center gap-2 md:gap-3 shrink-0">
+                                    <div className="flex flex-col items-end mr-1 md:mr-2 hidden sm:flex">
                                         <div className="text-[9px] text-gray-500 font-mono">OP_ID: {missionId}</div>
                                         <div className="text-[7px] text-gray-600 font-mono uppercase">AUTH_LVL: {resultStyles.classification}</div>
                                     </div>
-                                    <div className="h-8 w-[1px] bg-white/10 mx-1"></div>
+                                    <div className="h-6 md:h-8 w-[1px] bg-white/10 mx-1 hidden sm:block"></div>
                                     <button
                                         onClick={() => setIsMuted(!isMuted)}
-                                        className={`transition-colors p-1.5 rounded-sm flex items-center justify-center ${isMuted ? 'text-gray-600 hover:text-white' : 'text-space-ally hover:bg-space-ally/10'}`}
+                                        className={`transition-colors p-2 rounded-sm flex items-center justify-center ${isMuted ? 'text-gray-600 hover:text-white' : 'text-space-ally hover:bg-space-ally/10'}`}
                                     >
-                                        {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                                        {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
                                     </button>
                                     <button
-                                        onClick={handleReset}
-                                        className="text-gray-600 hover:text-white transition-colors hover:bg-white/5 p-1.5 rounded-sm flex items-center justify-center"
+                                        onClick={() => setShowResultModal(false)}
+                                        className="text-white bg-white/10 hover:bg-white/20 transition-colors p-2 rounded-sm flex items-center justify-center border border-white/10"
+                                        aria-label="Close Modal"
                                     >
                                         <X size={18} />
                                     </button>

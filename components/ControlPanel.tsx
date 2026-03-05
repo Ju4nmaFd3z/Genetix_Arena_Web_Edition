@@ -114,10 +114,10 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
 
     const isLidOpen = (isEmergencyAvailable && !isExploding && isRunning) || hasNukeBeenUsed;
 
-    const renderNukeButton = () => (
-        <div className="relative group h-full">
+    const renderNukeButton = (heightClass: string = "h-24") => (
+        <div className="relative group h-full flex flex-col">
             {/* Status Label */}
-            <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-gray-600 mb-2">
+            <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.2em] text-gray-600 mb-2 shrink-0">
                 <span className="flex items-center gap-1"><Radiation size={10} /> OMEGA PROTOCOL</span>
                 <span className={hasNukeBeenUsed ? "text-gray-600 font-bold" : isEmergencyAvailable && !isExploding && isRunning ? "text-red-500 animate-pulse font-bold" : "text-gray-700"}>
                     {hasNukeBeenUsed ? "PURGED" : isExploding ? "DETONATING..." : isEmergencyAvailable && isRunning ? "READY" : "LOCKED"}
@@ -126,7 +126,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
 
             {/* The Box Container */}
             <div
-                className={`relative h-24 landscape:h-full md:landscape:h-24 w-full bg-black border-2 ${hasNukeBeenUsed ? 'border-gray-800' : 'border-space-border'} overflow-visible select-none ${isShaking ? 'animate-shake' : ''}`}
+                className={`relative ${heightClass} w-full bg-black border-2 ${hasNukeBeenUsed ? 'border-gray-800' : 'border-space-border'} overflow-visible select-none ${isShaking ? 'animate-shake' : ''}`}
                 onClick={((!isEmergencyAvailable || isExploding) && isRunning) ? handleEmergencyClick : undefined}
             >
                 {/* Hazard Stripes Frame - VISIBLE IN ALL STATES */}
@@ -294,24 +294,29 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
             `}</style>
 
             {/* MODULE 0: MAIN DISPLAY */}
-            <div className="console-module p-3 rounded-sm">
+            <div className="console-module p-3 md:p-2 rounded-sm">
                 <div className="module-screw top-1 left-1"></div>
                 <div className="module-screw top-1 right-1"></div>
                 <div className="module-screw bottom-1 left-1"></div>
                 <div className="module-screw bottom-1 right-1"></div>
 
                 <div className="absolute -top-2 left-4 px-2 bg-[#16181b] text-[8px] text-gray-500 font-bold tracking-widest border border-[#2a2d31] z-10">PRIMARY_DISPLAY_UNIT</div>
-                <div className="mb-2 flex flex-col landscape:flex-row landscape:gap-2 landscape:items-stretch md:landscape:flex-col md:landscape:gap-0 md:landscape:items-stretch">
-                    <div className="w-full landscape:flex-1 md:landscape:w-full md:landscape:flex-none">
+                <div className="mt-2 md:mt-3 mb-0 landscape:mb-2 md:mb-1 flex flex-col landscape:flex-row landscape:gap-2 landscape:items-stretch md:landscape:flex-col md:landscape:gap-0 md:landscape:items-stretch">
+                    <div className="w-full landscape:flex-1 md:landscape:w-full md:landscape:flex-none flex flex-col">
+                        {/* Spacer for alignment with Nuke Button Label in Landscape Mobile */}
+                        <div className="hidden landscape:flex md:landscape:hidden items-center justify-between text-[10px] uppercase tracking-[0.2em] text-transparent mb-2 shrink-0 select-none">
+                            <span className="flex items-center gap-1"><Radiation size={10} /> ALIGN</span>
+                        </div>
                         <RetroLCD
                             message={lcdMessage?.msg || "SYSTEM OFFLINE"}
                             type={lcdMessage?.type || 'normal'}
                             subMessage={lcdMessage?.sub}
+                            className="flex-1"
                         />
                     </div>
                     {/* Nuke Button - Visible ONLY on Mobile Landscape */}
                     <div className="hidden landscape:block landscape:flex-1 md:landscape:hidden">
-                        {renderNukeButton()}
+                        {renderNukeButton("flex-1 mt-1 mb-2")}
                     </div>
                 </div>
             </div>
@@ -324,7 +329,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                 <div className="module-screw bottom-1 right-1"></div>
 
                 <div className="absolute -top-2 left-4 px-2 bg-[#16181b] text-[8px] text-gray-500 font-bold tracking-widest border border-[#2a2d31] z-10">MISSION_COMMAND_V3.5</div>
-                <div className="flex flex-col gap-3">
+                <div className="mt-2 flex flex-col gap-3">
                     {!hasStarted ? (
                         <button
                             onClick={onStart}
@@ -343,17 +348,17 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                         <div className="grid grid-cols-2 gap-3">
                             <button
                                 onClick={() => handleProtectedAction('pause', onTogglePause)}
-                                className={`flex flex-col items-center justify-center gap-1 p-3 font-bold uppercase tracking-wider text-[10px] transition-all border-2 shadow-[0_4px_0_rgba(0,0,0,0.5)] active:translate-y-[2px] active:shadow-[0_2px_0_rgba(0,0,0,0.5)] ${lockedControlId === 'pause' ? 'bg-red-900 border-red-500 text-white animate-shake' :
-                                    isRunning
+                                className={`flex flex-row items-center justify-center gap-2 p-4 font-bold uppercase tracking-wider text-[10px] transition-all border-2 shadow-[0_4px_0_rgba(0,0,0,0.5)] active:translate-y-[2px] active:shadow-[0_2px_0_rgba(0,0,0,0.5)] ${lockedControlId === 'pause' ? 'bg-red-900 border-red-500 text-white animate-shake' :
+                                    (isRunning || isExploding)
                                         ? 'bg-[#1a1a1a] border-[#333] text-amber-500 hover:border-amber-500/50'
                                         : 'bg-white text-black hover:bg-gray-200 border-gray-400'
                                     }`}
                             >
-                                {lockedControlId === 'pause' ? <><Lock size={14} /> LOCKED</> : isRunning ? <><Pause size={16} /> PAUSA</> : <><Play size={16} /> REANUDAR</>}
+                                {lockedControlId === 'pause' ? <><Lock size={14} /> LOCKED</> : (isRunning || isExploding) ? <><Pause size={16} /> PAUSA</> : <><Play size={16} /> REANUDAR</>}
                             </button>
                             <button
                                 onClick={() => handleProtectedAction('reset', onReset)}
-                                className={`flex flex-col items-center justify-center gap-1 p-3 border-2 font-bold uppercase tracking-wider text-[10px] transition-all shadow-[0_4px_0_rgba(0,0,0,0.5)] active:translate-y-[2px] active:shadow-[0_2px_0_rgba(0,0,0,0.5)] ${lockedControlId === 'reset' ? 'bg-red-900 border-red-500 text-white animate-shake' :
+                                className={`flex flex-row items-center justify-center gap-2 p-4 border-2 font-bold uppercase tracking-wider text-[10px] transition-all shadow-[0_4px_0_rgba(0,0,0,0.5)] active:translate-y-[2px] active:shadow-[0_2px_0_rgba(0,0,0,0.5)] ${lockedControlId === 'reset' ? 'bg-red-900 border-red-500 text-white animate-shake' :
                                     'bg-[#1a1a1a] border-[#333] text-gray-400 hover:border-red-500/50 hover:text-red-500'
                                     }`}
                             >
@@ -469,7 +474,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
 
                     {/* LAST RESORT - EMERGENCY PROTOCOL BUTTON */}
                     <div className="mt-2 landscape:hidden md:landscape:block">
-                        {renderNukeButton()}
+                        {renderNukeButton("h-24")}
                     </div>
                 </div>
             </div>
