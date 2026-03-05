@@ -6,7 +6,7 @@
 
 #### 🏗️ Arquitectura
 - **v3.3:** Monolítico JavaScript vanilla (~1000+ líneas en `app.js`)
-- **v3.5:** Modular TypeScript + React (6 componentes + 1 servicio)
+- **v3.5:** Modular TypeScript + React (9 componentes + 1 servicio)
 
 #### 🔤 Lenguaje
 - **v3.3:** JavaScript ES6+ (tipado dinámico)
@@ -18,56 +18,71 @@
 
 #### 🎨 Estilos
 - **v3.3:** CSS3 custom (~500 líneas)
-- **v3.5:** Tailwind CSS 3 (utility-first + custom theme)
+- **v3.5:** Tailwind CSS vía CDN (utility-first + custom theme en `index.html`)
 
 #### 🖥️ Componentes
-- **v3.3:** 
+
+- **v3.3:**
   ```
   index.html (canvas + divs genéricos)
   app.js (TODO el código)
   ```
 - **v3.5:**
   ```
-  App.tsx (orquestador principal)
-  LandingPage.tsx (UI landing)
-  ControlPanel.tsx (panel de control)
-  ConsoleLog.tsx (consola de eventos)
-  GenetixEngine.ts (motor de IA)
-  types.ts (definiciones TS)
+  App.tsx              (orquestador principal, game loop y audio)
+  LandingPage.tsx      (UI de landing con modales)
+  ControlPanel.tsx     (panel de control: sliders, toggles, botones)
+  ConsoleLog.tsx       (consola de eventos en tiempo real)
+  StatsDisplay.tsx     (panel de estadísticas detalladas)
+  RetroLCD.tsx         (display LCD retro de estado)
+  SignalLossEffect.tsx (efecto visual de pérdida de señal / glitch)
+  GenetixEngine.ts     (motor de IA)
+  types.ts             (definiciones TypeScript)
   ```
 
 #### 📱 Responsividad
 - **v3.3:** Media queries manuales, responsive parcial
-- **v3.5:** Mobile-first con Tailwind, **fully responsive** (desktop/tablet/mobile)
+- **v3.5:** Mobile-first con Tailwind, **fully responsive** (desktop/tablet/móvil)
 
 #### 📚 UI Enhancements
+
 - **v3.3:**
   - Layout fijo
   - Interfaz básica
   - Sin modales informativos
-  
+  - Sin sistema de audio
+
 - **v3.5:**
-  - Layout adaptive
-  - Interfaz profesional (HUD táctica)
+  - Layout adaptativo
+  - Interfaz profesional (HUD táctico)
   - 3 modales informativos (Misión, Telemetría, Sistema)
   - Landing page interactiva
   - Consola con timestamps y colores
+  - Modal de estadísticas detalladas
+  - Sistema de audio con 5 pistas y control de mute
+  - Efectos visuales: Signal Loss, explosión nuclear, animaciones CRT
 
 #### ⚡ Performance
-- **v3.3:** Todas entidades actualizadas cada frame (sin throttle)
-- **v3.5:** Tickrate configurable (50-500ms) + RAF throttling
+- **v3.3:** Todas las entidades actualizadas cada frame (sin throttle)
+- **v3.5:** Tickrate configurable (50–500ms) + RAF throttling
 
 #### 📦 Dependencias
 - **v3.3:** Cero dependencias (vanilla)
-- **v3.5:** 3 dependencias (react, react-dom, lucide-react) + devDependencies estándar
+- **v3.5:** 3 dependencias de producción (`react`, `react-dom`, `lucide-react`) + devDependencies estándar
 
 #### 🚀 Features Nuevas en v3.5
 - ✅ Landing page profesional
 - ✅ Modales informativos interactivos
 - ✅ Consola de logs en tiempo real
 - ✅ Configuración de parámetros en vivo (UI mejorada)
-- ✅ Toggle de barras de vida (visual)
-- ✅ Modal de resultado final (VICTORIA/DERROTA/EMPATE)
+- ✅ Toggle de barras de vida
+- ✅ Modal de resultado final (VICTORIA / DERROTA / EMPATE)
+- ✅ Modal de estadísticas detalladas (daño total, curación, tasa de supervivencia)
+- ✅ Sistema de audio con 5 pistas y fade automático entre estados
+- ✅ Control de mute/unmute
+- ✅ Effect de Signal Loss (glitch, ruido estático, distorsión RGB)
+- ✅ Explosión nuclear (Nuke) con coordenadas objetivo
+- ✅ Mission ID dinámico generado en cada sesión
 - ✅ HMR (hot reload) en desarrollo
 - ✅ TypeScript strict mode
 - ✅ Fully responsive design
@@ -104,31 +119,33 @@ npm install
 # Iniciar dev server con HMR
 npm run dev
 
-# Debería output algo como:
-# ➜  Local:   http://localhost:5173/
+# Output esperado:
+# ➜  Local:   http://localhost:3000/
 # ➜  Press h + enter to show help
 ```
 
-Abre en navegador: `http://localhost:5173`
+Abre en navegador: `http://localhost:3000`
 
 ### 3. Uso de la Aplicación
 
 #### Landing Page
 1. Lee los **3 modales informativos:**
-   - **Misión:** Explicación de IA protocols
-   - **Telemetría:** Análisis de desequilibrio (¿por qué enemigos ganan?)
+   - **Misión:** Protocolo de IA de cada facción
+   - **Telemetría:** Análisis del desequilibrio táctico
    - **Sistema:** Especificaciones técnicas v3.5
 
-2. Click en **"INICIAR SISTEMA"** para comenzar
+2. Activa el audio con el botón de mute (opcional).
+
+3. Click en **"INICIAR SISTEMA"** para comenzar.
 
 #### Game View
 - **Canvas (izquierda):** Visualización 75×25 de la simulación
-- **Panel Derecho:** 
-  - Stats (contadores en vivo)
-  - Sliders (configuración de entidades)
-  - Speed control (50-500ms)
+- **Panel Derecho:**
+  - Stats (contadores en vivo + botón de estadísticas detalladas)
+  - Sliders (configuración de entidades, deshabilitados durante la simulación)
+  - Speed control (50–500ms)
   - Toggle de barras de vida
-  - Botones (Pausar/Reanudar/Reiniciar)
+  - Botones (Iniciar / Pausar / Reanudar / Reiniciar)
 - **Consola (abajo):** Registro de eventos en tiempo real
 
 #### Parámetros Configurables
@@ -138,56 +155,56 @@ Abre en navegador: `http://localhost:5173`
 | **Aliados** | 0–150 | 75 | Fuerzas propias |
 | **Enemigos** | 0–150 | 75 | Fuerzas hostiles |
 | **Curanderos** | 0–150 | 5 | Apoyo logístico |
-| **Obstáculos** | 0–150 | 50 | Terreno |
-| **Velocidad Sim** | 50–500ms | 200ms | Tickrate |
-| **Barras de Vida** | On/Off | On | Mostrar HP |
+| **Obstáculos** | 0–150 | 50 | Terreno estático |
+| **Velocidad Sim** | 50–500ms | 200ms | Tickrate del game loop |
+| **Barras de Vida** | On/Off | On | Mostrar HP en canvas |
 
-**Nota:** Los parámetros se pueden cambiar ANTES de iniciar. Durante simulación, solo velocidad y barras son ajustables. Para cambiar cantidades, debes reiniciar.
+> ⚠️ Los contadores de entidades solo son ajustables **antes de iniciar** o tras **reiniciar**. La velocidad y las barras de vida son ajustables en cualquier momento.
 
 ### 4. Interpretación de Resultados
 
 #### Iconografía en Canvas
 
 ```
-🟢 Círculo verde  = Aliado (salud en barrita arriba)
-❌ Cruz roja      = Enemigo hostil
-⚕️ Cruz azul      = Curandero (Med-Unit)
-🟧 Cuadrado amber = Obstáculo
+🟢 Círculo verde   =  Aliado (Op)
+❌ Cruz roja       =  Enemigo (Hostile)
+⚕️ Cruz azul       =  Curandero (Med-Unit)
+🟧 Cuadrado amber  =  Obstáculo
 ```
 
-#### Barras de Salud (si está activado)
+#### Barras de Salud (Si está activado)
 
 ```
-verde  (#10b981) = 50–100% HP (sano)
-yellow (#eab308) = 25–50% HP (herido)
-red    (#ef4444) = 0–25% HP (crítico)
+Verde    (#10b981) = 50–100% HP  →  Sano
+Amarillo (#eab308) = 25–49% HP   →  Herido
+Rojo     (#ef4444) = 0–24% HP    →  Crítico
 ```
 
 #### Consola de Logs
 
 ```
 [14:30:15] Secuencia de simulación iniciada.              [🔵 system]
-[14:30:15] Entidades desplegadas: 75 Aliados, 75...      [⚪ info]
-[14:30:16] Hostiles atacando fuerzas aliadas...          [🔴 combat]
-[14:30:17] SIMULACIÓN FINALIZADA. RESULTADO: ...         [🔵 system]
+[14:30:15] Entidades desplegadas: 75 Aliados, 75...       [⚪ info]
+[14:30:16] Hostiles atacando fuerzas aliadas...           [🔴 combat]
+[14:30:17] SIMULACIÓN FINALIZADA. RESULTADO: ...          [🔵 system]
 ```
 
 #### Resultados Finales
 
 ```
-VICTORIA ALIADA   = Los enemigos fueron eliminados (~15-20% probabilidad)
-VICTORIA ENEMIGA  = Los aliados fueron eliminados (~65-75% probabilidad)
-EMPATE TÁCTICO    = Ambos bandos eliminados (~10-15% probabilidad)
+VICTORIA ALIADA   = Los enemigos fueron eliminados (~15–20% probabilidad)
+VICTORIA ENEMIGA  = Los aliados fueron eliminados (~65–75% probabilidad)
+EMPATE TÁCTICO    = Ambos bandos eliminados simultáneamente (~10–15% probabilidad)
 ```
 
 ### 5. Build para Producción
 
 ```bash
-# Compilar TypeScript + bundling
+# Compilar TypeScript + bundling con Vite
 npm run build
 
-# Output: dist/ (carpeta lista para servir)
-# Tamaño típico: ~100-150 KB (minificado + gzipped)
+# Output: dist/ (lista para servir)
+# Tamaño típico: ~100–150 KB (minificado + gzipped)
 ```
 
 ### 6. Preview del Build
@@ -205,57 +222,41 @@ npm run preview
 
 ### Para Ganar como Aliados
 
-1. **Aumenta cantidad de curanderos:** De 5 a 10-15
-   - Mayor cobertura de curación
-   - Aliados logran mantenerse más tiempo
-
-2. **Aumenta cantidad de aliados:** De 75 a 100+
-   - Superioridad numérica > ofensiva enemiga
-
-3. **Reduce enemigos:** De 75 a 50
-   - Menos presión táctica
-
-4. **Aumenta obstáculos:** De 50 a 75+
-   - Usa el terreno para bloquear persecución enemiga
+1. **Aumenta curanderos:** De 5 a 10–15 → mayor cobertura logística.
+2. **Aumenta aliados:** De 75 a 100+ → superioridad numérica.
+3. **Reduce enemigos:** De 75 a 50 → menos presión táctica.
+4. **Aumenta obstáculos:** De 50 a 75+ → bloquea rutas de persecución.
 
 ### Para Entender el Desequilibrio
 
-Abre modal "Telemetría" en landing page. Lee la sección "ANÁLISIS DE DESIGUALDAD":
+Abre el modal **"Telemetría"** en la landing page para el análisis completo de:
 - Asimetría Ofensiva vs Reactiva
-- Geometría Euclidiana (curación limitada)
-- Diferencial de Resistencia
+- Geometría Euclidiana (curación limitada a distancia ≤ 1.0)
+- Diferencial de Resistencia (−35 HP aliados vs −25 HP enemigos)
 
-El sistema está balanceado INTENCIONALMENTE. No es un bug.
+El sistema está desequilibrado **intencionalmente**. No es un bug.
 
 ### Debug / Troubleshooting
 
-#### ¿Por qué el juego va muy lento?
-→ Aumenta "VELOCIDAD SIM" a 500ms. O reduce cantidad de entidades.
-
-#### ¿Por qué el juego va muy rápido?
-→ Reduce "VELOCIDAD SIM" a 50-100ms.
-
-#### ¿Por qué no se ve bien en móvil?
-→ La v3.5 está fully responsive. Intenta zooming out (Ctrl - en Firefox/Chrome).
-
-#### ¿Puedo cambiar parámetros durante la partida?
-→ Solo "VELOCIDAD SIM" y toggle de barras. Otros requieren reiniciar.
-
-#### ¿Dónde veo los logs?
-→ Consola abajo. Desplázate para ver histórico. Se guardan los últimos 50.
+| Problema | Solución |
+| :--- | :--- |
+| Canvas no renderiza | Usa un navegador moderno (Chrome 90+, Firefox 88+). |
+| HMR no funciona | Reinicia `npm run dev`. |
+| Build falla | Ejecuta `npm ci` para instalar versiones exactas del lock file. |
+| Simulación muy lenta | **Reduce** el tickrate a 50–100ms en el panel de control. |
+| Simulación muy rápida | **Aumenta** el tickrate a 400–500ms en el panel de control. |
+| No hay sonido | Verifica que el mute esté desactivado con el toggle en la UI. |
+| Parámetros no cambian | Los contadores de entidades solo aplican al **reiniciar**. |
 
 ---
 
 ## 📚 Documentación Completa
-
-Para profundizar, consulta los siguientes archivos:
 
 | Documento | Contenido |
 | :--- | :--- |
 | **README.md** | Resumen general, instalación, características |
 | **DOCUMENTACIÓN_v3.5.md** | Documentación técnica completa (800+ líneas) |
 | **GUÍA_ARQUITECTURA.md** | Arquitectura, comparativa v3.3 vs v3.5, patrones |
-| **ANÁLISIS_EQUILIBRIO_v3.5.md** | Deep dive en balance y desigualdad intencional |
 | **Este archivo** | Changelog rápido + quick start |
 
 ---
@@ -264,55 +265,19 @@ Para profundizar, consulta los siguientes archivos:
 
 ```bash
 # Desarrollo
-npm run dev           # Inicia dev server en http://localhost:5173
+npm run dev           # Inicia dev server en http://localhost:3000
 
 # Build
-npm run build         # Compila a dist/
-npm run preview       # Preview del build
+npm run build         # Compila TypeScript + bundle a dist/
+npm run preview       # Preview del build en http://localhost:4173
 
-# Linting / Format (opcional, si configuras)
-# npm run lint
-# npm run format
+# Calidad de código
+npm run lint          # Ejecuta ESLint sobre el proyecto
 
-# Otros
+# Mantenimiento de dependencias
 npm list              # Ver dependencias instaladas
 npm outdated          # Ver actualizaciones disponibles
-npm update            # Actualizar dependencias menores
-```
-
----
-
-## 🌐 Deployment
-
-### Vercel (Recomendado)
-
-```bash
-# 1. Conecta repo a Vercel
-# 2. Vercel auto-detecta Vite
-# 3. Deploy automático en push a main
-```
-
-### Netlify
-
-```bash
-# 1. Conecta repo
-# 2. Build command: npm run build
-# 3. Publish directory: dist
-```
-
-### GitHub Pages
-
-```bash
-# 1. En vite.config.ts, añade:
-export default {
-  base: '/Genetix_Arena_Web_Edition/',
-  // ...
-}
-
-# 2. En package.json, añade script:
-"deploy": "npm run build && gh-pages -d dist"
-
-# 3. Ejecuta: npm run deploy
+npm ci                # Instalar versiones exactas del lock file
 ```
 
 ---
@@ -321,11 +286,9 @@ export default {
 
 ### TypeScript
 - https://www.typescriptlang.org/docs/
-- https://www.typescripttutorial.net/
 
 ### React 19
-- https://react.dev/ (oficial)
-- React docs: https://react.dev/learn
+- https://react.dev/learn
 
 ### Vite
 - https://vitejs.dev/guide/
@@ -365,20 +328,4 @@ Siempre menciona la autoría original del proyecto.
 
 ---
 
-## 🎉 ¡Listo para jugar!
-
-```bash
-npm install
-npm run dev
-# → Abre http://localhost:5173 en tu navegador
-# → ¡Lee los modales informativos!
-# → ¡Inicia la simulación!
-```
-
-**Versión:** 3.5 Stable  
-**Última Actualización:** 2026  
-**Status:** ✅ Production Ready
-
----
-
-**¿Preguntas?** Consulta la documentación completa en los archivos `.md` incluidos.
+**Versión:** 3.5 Stable | **Última Actualización:** 2026 | **Status:** ✅ Production Ready

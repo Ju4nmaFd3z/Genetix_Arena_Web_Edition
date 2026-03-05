@@ -26,7 +26,7 @@
 | **Build Tool** | Manual (HTTP) | Vite + bundling | HMR, tree-shaking, optimización |
 | **UI State** | Manual (DOM) | React Hooks | Sincronización automática UI ↔ State |
 | **Testing** | No formalizado | Preparado para Jest/Vitest | Confianza en refactoring |
-| **Responsividad** | Parcial (media queries) | Mobile-first grid | Experiencia uniforme móvil |
+| **Responsividad** | Parcial (media queries) | Mobile-first grid | Experiencia uniforme en móvil |
 | **Deployment** | Vanilla files | Vite build optimizado | Menor tamaño, mejor caché |
 
 ---
@@ -66,6 +66,7 @@
 - ❌ No modular → difícil de testear
 - ❌ State management manual → propenso a bugs
 - ❌ Responsive limitada
+- ❌ Sin sistema de audio ni efectos visuales
 
 ### v3.5 (TypeScript + React + Vite)
 
@@ -81,26 +82,31 @@
 │  └─ @vitejs/plugin-react                                 │
 │                                                          │
 │  Componentes React (Modular)                             │
-│  ├─ App.tsx (Orquestador, game loop)                     │
-│  ├─ LandingPage.tsx (UI de landing)                      │
-│  ├─ ControlPanel.tsx (Panel de control)                  │
-│  └─ ConsoleLog.tsx (Consola de logs)                     │
+│  ├─ App.tsx           (Orquestador, game loop y audio)   │
+│  ├─ LandingPage.tsx   (UI de landing)                    │
+│  ├─ ControlPanel.tsx  (Panel de control)                 │
+│  ├─ ConsoleLog.tsx    (Consola de logs)                  │
+│  ├─ StatsDisplay.tsx  (Estadísticas detalladas)          │
+│  ├─ RetroLCD.tsx      (Display de estado)                │
+│  └─ SignalLossEffect.tsx (Efectos visuales de glitch)    │
 │                                                          │
 │  Lógica de Negocio (TypeScript Vanilla)                  │
-│  ├─ GenetixEngine.ts (Motor de IA)                       │
-│  ├─ types.ts (Definiciones TS)                           │
-│  └─ MisFunciones.ts (Utilidades)                         │
+│  ├─ GenetixEngine.ts  (Motor de IA + utilidades)         │
+│  └─ types.ts          (Definiciones TS)                  │
 │                                                          │
-│  Estilos (Tailwind CSS)                                  │
+│  Estilos (Tailwind CSS via CDN)                          │
 │  ├─ Utility classes                                      │
-│  ├─ Custom theme (space-*)                               │
+│  ├─ Custom theme (space-*) definido en index.html        │
 │  └─ Responsive defaults (mobile-first)                   │
 │                                                          │
 │  Tooling (Vite)                                          │
-│  ├─ Dev server + HMR                                     │
-│  ├─ TypeScript compilation                               │
+│  ├─ Dev server + HMR (puerto 3000)                       │
+│  ├─ TypeScript compilation (tsc -b)                      │
 │  ├─ Code splitting                                       │
 │  └─ Production bundling                                  │
+│                                                          │
+│  Assets                                                  │
+│  └─ public/tracks/ (5 pistas MP3)                        │
 │                                                          │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -111,7 +117,8 @@
 - ✅ React Hooks → state management automático
 - ✅ Fully responsive → mobile-first
 - ✅ Build tooling profesional → optimizado para producción
-- ⚠️ Dependencias externas (pero estándar en industria)
+- ✅ Sistema de audio + efectos visuales avanzados
+- ⚠️ Dependencias externas (estándar en la industria)
 
 ---
 
@@ -146,7 +153,7 @@ app.js (script tag)
     ├─ Crea listeners
     ├─ Inicia game loop (requestAnimationFrame)
     └─ Todo ocurre en scope global
-    
+
     ↓
 Usuario hace click en "Iniciar"
     ↓
@@ -163,11 +170,11 @@ Continúa hasta victoria/derrota
 ### Problemas de v3.3
 
 1. **Tipado Dinámico:** Errores como `entity.posX.toString()` no se detectan hasta runtime
-2. **Monolítico:** 1000+ líneas en un único `app.js` → difícil de navegar
-3. **State Manual:** Control manual del DOM con `getElementById()` y `innerHTML`
+2. **Monolítico:** 1000+ líneas en un único `app.js` → difícil de navegar y mantener
+3. **State Manual:** Control directo del DOM con `getElementById()` e `innerHTML`
 4. **Sin Hot Reload:** Cambios requieren F5 (refresh manual)
 5. **Dependencias Implícitas:** Difícil saber qué depende de qué
-6. **Testing Difícil:** No modular → casi imposible unit test
+6. **Testing Difícil:** No modular → casi imposible hacer unit tests
 
 ---
 
@@ -176,32 +183,43 @@ Continúa hasta victoria/derrota
 ### Estructura de Archivos
 
 ```
-GenetixArenaWeb_v3.5/
+Genetix_Arena_Web_Edition/
 │
-├── index.html                      # HTML minimal + CDN Tailwind/React
+├── index.html                      # HTML minimal + CDN Tailwind + fuentes Google
 ├── index.tsx                       # React root entry
-├── index.css                       # Estilos globales (minimal)
+├── favicon.svg                     # Favicon de la aplicación
 │
 ├── App.tsx                         # Componente raíz
 │   ├─ State management (useState)
-│   ├─ Game loop orchestration
+│   ├─ Game loop orchestration (requestAnimationFrame + loopRef)
+│   ├─ Sistema de audio (5 AudioRefs + fade automático)
 │   └─ Composición de componentes
 │
 ├── components/
-│   ├─ LandingPage.tsx             # UI de landing
+│   ├─ LandingPage.tsx             # UI de landing con 3 modales
 │   ├─ ControlPanel.tsx            # Panel de control (sliders, botones)
-│   └─ ConsoleLog.tsx              # Consola de eventos
+│   ├─ ConsoleLog.tsx              # Consola de eventos
+│   ├─ StatsDisplay.tsx            # Panel de estadísticas detalladas
+│   ├─ RetroLCD.tsx                # Display LCD de estado
+│   └─ SignalLossEffect.tsx        # Overlay de glitch / Signal Loss
 │
 ├── services/
-│   └─ GenetixEngine.ts            # Motor de IA (lógica pura)
+│   └─ GenetixEngine.ts            # Motor de IA + utilidades
 │
 ├── types.ts                        # Definiciones TypeScript
 │
-├── package.json                    # Dependencias npm
-├── tsconfig.json                   # Configuración TS
-├── vite.config.ts                  # Configuración Vite
+├── public/tracks/                  # Assets de audio
+│   ├─ LandingTrack.mp3
+│   ├─ BattleTrack.mp3
+│   ├─ AlliesWinTrack.mp3
+│   ├─ EnemiesWinTrack.mp3
+│   └─ DrawTrack.mp3
 │
-└── tailwind.config.js              # Configuración Tailwind (theme)
+├── metadata.json                   # Metadatos del proyecto
+├── package.json                    # Dependencias npm
+├── eslint.config.js                # Configuración de ESLint
+├── tsconfig.json                   # Configuración TypeScript
+└── vite.config.ts                  # Configuración Vite (puerto 3000, alias, env)
 ```
 
 ### Separación de Responsabilidades
@@ -209,44 +227,57 @@ GenetixArenaWeb_v3.5/
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                      React Components                   │
-│                  (UI Layer)                             │
+│                    (UI Layer)                           │
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
 │  App.tsx                                                │
-│  ├─ Maneja estado global (isRunning, config, stats)     │
-│  ├─ Orquesta game loop (requestAnimationFrame)          │
-│  └─ Renderiza layout principal                          │
+│  ├─ Estado global (view, config, stats, logs, audio...) │
+│  ├─ Game loop (loopRef + requestAnimationFrame)         │
+│  ├─ Sistema de audio (5 pistas, fade, mute)             │
+│  └─ Layout principal                                    │
 │                                                         │
 │  LandingPage.tsx                                        │
-│  ├─ Componente "ruta" landing                           │
-│  ├─ Modales informativos                                │
-│  └─ Entrada de usuario                                  │
+│  ├─ Pantalla de bienvenida                              │
+│  ├─ 3 modales informativos                              │
+│  └─ CTA de inicio + toggle de mute                      │
 │                                                         │
 │  ControlPanel.tsx                                       │
+│  ├─ RetroLCD (estado de simulación)                     │
 │  ├─ Sliders (entidades, velocidad)                      │
 │  ├─ Toggles (barras de vida)                            │
 │  └─ Botones de control                                  │
 │                                                         │
 │  ConsoleLog.tsx                                         │
-│  ├─ Renderiza log entries                               │
+│  ├─ Renderiza log entries con timestamps                │
 │  └─ Auto-scroll al final                                │
+│                                                         │
+│  StatsDisplay.tsx                                       │
+│  └─ Estadísticas detalladas (daño, curación, etc.)      │
+│                                                         │
+│  RetroLCD.tsx                                           │
+│  └─ Display LCD del estado actual                       │
+│                                                         │
+│  SignalLossEffect.tsx                                   │
+│  └─ Overlay de glitch (noise / dark / idle)             │
 │                                                         │
 └─────────────────────────────────────────────────────────┘
               ↕ Props, Callbacks
 ┌─────────────────────────────────────────────────────────┐
 │              TypeScript Core Logic                      │
-│                (Business Logic Layer)                   │
+│              (Business Logic Layer)                     │
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
 │  GenetixEngine.ts                                       │
 │  ├─ Clases: Entidad, Aliado, Enemigo, Curandero         │
 │  ├─ Grid state (75x25 array)                            │
 │  ├─ Métodos: init(), update(), draw(), checkWin()       │
-│  └─ Utilidades: posicionValida(), colisiones, etc.      │
+│  ├─ getDetailedStats() → DetailedStats                  │
+│  └─ Utilidades: posicionValida(), colisiones, cleanup   │
 │                                                         │
 │  types.ts                                               │
 │  ├─ GameConfig                                          │
 │  ├─ GameStats                                           │
+│  ├─ DetailedStats                                       │
 │  ├─ LogEntry                                            │
 │  └─ Entity interface                                    │
 │                                                         │
@@ -256,7 +287,7 @@ GenetixArenaWeb_v3.5/
 │                   Rendering (Canvas)                    │
 │                  (Presentation Layer)                   │
 ├─────────────────────────────────────────────────────────┤
-│  <canvas> element                                       │
+│  <canvas> element (1500×500px)                          │
 │  engine.draw(ctx, config) → renderiza entidades         │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -271,49 +302,37 @@ index.html
 index.tsx (React root)
     ├─ ReactDOM.createRoot()
     └─ root.render(<App />)
-    
+
     ↓
 App.tsx (componente raíz)
-    ├─ useState: view, config, stats, logs, isRunning, gameResult
-    ├─ useRef: canvasRef, engineRef, lastTickRef, animationFrameRef
+    ├─ useState: view, opacity, config, stats, detailedStats,
+    │            logs, isRunning, hasStarted, gameResult,
+    │            missionId, isMuted, isExploding, signalPhase...
+    ├─ useRef: canvasRef, engineRef, lastTickRef, loopRef,
+    │          landingAudioRef, gameAudioRef, ...
     ├─ useCallback: addLog()
-    ├─ useEffect: sincroniza RAF loop con estado
-    └─ Renderiza: LandingPage O (Canvas + ControlPanel + ConsoleLog)
-    
+    └─ useEffect: sincroniza RAF loop con estado
+
     ↓
 LandingPage.tsx (si view === 'landing')
-    ├─ Muestra hero section
-    ├─ Tres modales informativos
-    └─ CTA button → onStart() → setView('game')
-    
+    ├─ Hero section + modales
+    └─ CTA button → onStart() → transición a 'game'
+
     ↓
 Game View (si view === 'game')
-    ├─ Canvas (1500x500)
-    ├─ Right Sidebar con ControlPanel.tsx
-    │   ├─ Permite modificar config (sliders)
-    │   ├─ Controles de pausa/reinicio
-    │   └─ Feedback en vivo (stats)
-    ├─ Bottom Console con ConsoleLog.tsx
-    │   └─ Muestra eventos en orden temporal
-    └─ Modal de resultado (victoria/derrota)
-    
+    ├─ Canvas (1500×500) + SignalLossEffect overlay
+    ├─ Right Sidebar: StatsDisplay + ControlPanel
+    ├─ Bottom Console: ConsoleLog
+    └─ Modal de resultado (victoria/derrota/empate)
+
     ↓
-Game Loop (useEffect)
-    ├─ const loop = (timestamp) => {
-    │   if (isRunning) {
-    │     engine.update()              ← GenetixEngine
-    │     engine.draw(ctx, config)
-    │     setStats(...)                ← Sincroniza con React
-    │   }
-    │   requestAnimationFrame(loop)
-    │ }
-    └─ Cleanup: cancelAnimationFrame()
-    
-    ↓
-Cuando game ends
-    ├─ engine.checkWin() retorna resultado
-    ├─ setGameResult(result)
-    └─ Modal overlay muestra VICTORIA/DERROTA
+Game Loop (loopRef + requestAnimationFrame)
+    ├─ Throttle por config.renderSpeed
+    ├─ engine.update()           ← GenetixEngine (lógica IA)
+    ├─ engine.draw(ctx, config)  ← Canvas render
+    ├─ setStats(...)             ← Sincroniza UI básica
+    ├─ setDetailedStats(...)     ← Sincroniza métricas avanzadas
+    └─ addLog(event, 'combat')   ← Registra eventos
 ```
 
 ---
@@ -334,23 +353,24 @@ app.js
 └─ Collision detection
 ```
 
-**Problema:** Mezcla de concerns. Difícil entender flujo.
+**Problema:** Mezcla total de concerns. Imposible testear partes aisladas.
 
 ### v3.5: Separado por Responsabilidad
 
 ```
 App.tsx (Orquestador)
-├─ Maneja estado de la app (view, config, logs, etc.)
-├─ Controla game loop (requestAnimationFrame)
-├─ Sincroniza React ↔ Canvas
+├─ Estado de la app (view, config, logs, audio, etc.)
+├─ Game loop (requestAnimationFrame + loopRef)
+├─ Sistema de audio (5 pistas + fade + mute)
 └─ Composición de componentes
 
 LandingPage.tsx (UI de bienvenida)
-├─ Renderiza página inicial
-├─ Modales informativos
+├─ Pantalla inicial
+├─ 3 modales informativos
 └─ CTA de inicio
 
 ControlPanel.tsx (UI de control)
+├─ RetroLCD de estado
 ├─ Sliders de parámetros
 ├─ Toggles de opciones
 └─ Botones de acción
@@ -359,20 +379,30 @@ ConsoleLog.tsx (UI de logs)
 ├─ Renderiza historial de eventos
 └─ Auto-scroll
 
+StatsDisplay.tsx (UI de métricas)
+└─ Estadísticas detalladas de sesión
+
+RetroLCD.tsx (UI de estado)
+└─ Display LCD de estado actual
+
+SignalLossEffect.tsx (UI de efectos)
+└─ Overlay de glitch y pérdida de señal
+
 GenetixEngine.ts (Lógica pura)
-├─ Clases (Entidad, Aliado, Enemigo, Curandero)
-├─ Métodos (init, update, draw, checkWin)
-├─ Utilidades (posicionValida, colisiones)
+├─ Clases (Entidad, Aliado, Enemigo, Curandero, Obstaculo)
+├─ Métodos (init, update, draw, checkWin, getDetailedStats)
+├─ Utilidades (posicionValida, colisiones, cleanup)
 └─ CERO acceso a React/DOM
 
 types.ts (Contratos)
 ├─ GameConfig interface
 ├─ GameStats interface
+├─ DetailedStats interface
 ├─ LogEntry interface
 └─ Entity interface
 ```
 
-**Beneficio:** Cada archivo tiene una responsabilidad clara. Fácil de testear.
+**Beneficio:** Cada archivo tiene una única responsabilidad. Fácil de testear, depurar y escalar.
 
 ---
 
@@ -386,6 +416,7 @@ types.ts (Contratos)
 const [isRunning, setIsRunning] = useState(false);
 const [config, setConfig] = useState<GameConfig>(DEFAULT_CONFIG);
 const [logs, setLogs] = useState<LogEntry[]>([]);
+const [isMuted, setIsMuted] = useState(true);
 ```
 
 #### **useRef** - Persist Values Across Renders
@@ -394,6 +425,8 @@ const [logs, setLogs] = useState<LogEntry[]>([]);
 const canvasRef = useRef<HTMLCanvasElement>(null);
 const engineRef = useRef<GenetixEngine>(new GenetixEngine());
 const lastTickRef = useRef<number>(0);
+const loopRef = useRef<(timestamp: number) => void>(() => {});
+const gameAudioRef = useRef<HTMLAudioElement | null>(null);
 ```
 
 #### **useCallback** - Memoized Callbacks
@@ -409,15 +442,26 @@ const addLog = useCallback((msg: string, type: LogEntry['type'] = 'info') => {
 ```typescript
 useEffect(() => {
   if (isRunning) {
-    animationFrameRef.current = requestAnimationFrame(loop);
+    animationFrameRef.current = requestAnimationFrame(loopRef.current);
   }
   return () => cancelAnimationFrame(animationFrameRef.current);
 }, [isRunning, config]);
 ```
 
-### 2. TypeScript Interfaces
+### 2. loopRef Pattern (evitar stale closures)
 
-Todo tiene un tipo bien definido:
+El game loop usa `loopRef.current` en lugar de una función declarada directamente en el efecto. Se sobreescribe en cada render, garantizando que el RAF siempre acceda a los valores más recientes de estado:
+
+```typescript
+loopRef.current = (timestamp: number) => {
+  // accede a isRunning, config, etc. actualizados
+};
+requestAnimationFrame(loopRef.current);
+```
+
+### 3. TypeScript Interfaces
+
+Todo tiene tipo bien definido, sin `any`:
 
 ```typescript
 interface GameConfig {
@@ -426,29 +470,25 @@ interface GameConfig {
   entityCounts: { allies: number; enemies: number; ... };
 }
 
-interface Entity {
-  posX: number;
-  posY: number;
-  vida: number;
-  getDistancia(e: Entity): number;
-  // etc.
+interface DetailedStats {
+  averageAllyLifespan: string;
+  totalDamageDealtByAllies: number;
+  totalHealingDone: number;
+  survivalRate: string;
 }
 ```
 
-**Beneficio:** Autocompletado en IDE, errores en compile-time.
+### 4. Props Drilling vs Context
 
-### 3. Props Drilling vs Context
-
-Actualmente usamos **props drilling** (pasar props de componente en componente). Para apps más grandes, se podría usar **React Context** o **Zustand** para global state.
+Actualmente se usa **props drilling** (pasar props de componente en componente). Para apps más grandes, se podría migrar a **React Context** o **Zustand**:
 
 ```typescript
 // Actual (props drilling)
-<ControlPanel 
+<ControlPanel
   config={config}
   isRunning={isRunning}
   setConfig={setConfig}
   onTogglePause={...}
-  {...}
 />
 
 // Alternativa con Context
@@ -457,131 +497,100 @@ Actualmente usamos **props drilling** (pasar props de componente en componente).
 </GameContext.Provider>
 ```
 
-### 4. Tailwind CSS Utilities
+### 5. Tailwind CSS vía CDN
 
-En lugar de clases CSS custom, usamos Tailwind:
-
-```typescript
-<div className="flex items-center gap-2 p-4 bg-space-dark border border-space-border">
-  // flex, items-center, gap-2, p-4, bg-space-dark, border, border-space-border
-</div>
-```
-
-**Ventajas:**
-- Consistencia visual
-- Rápido prototipado
-- Responsive built-in (`md:`, `lg:`, etc.)
-- Dark mode support
-
-### 5. Custom Tailwind Theme
-
-Define colores y fuentes:
+El tema personalizado se define en `index.html` (no en un `tailwind.config.js` separado, ya que Tailwind se carga desde CDN):
 
 ```javascript
-// tailwind.config.js
-theme: {
-  extend: {
-    colors: {
-      space: {
-        black: '#050505',
-        dark: '#0a0a0a',
-        ally: '#10b981',
-        enemy: '#ef4444',
-        // ...
-      }
-    },
-    fontFamily: {
-      mono: ['JetBrains Mono', 'monospace'],
+// index.html
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: { space: { ally: '#10b981', enemy: '#ef4444', ... } }
     }
   }
 }
 ```
 
-Uso: `className="text-space-ally font-mono"`
+Uso en componentes: `className="text-space-ally font-mono bg-space-dark"`
 
 ---
 
 ## Mejoras Clave
 
-### 1. Tipado Estático (TypeScript)
+### 1. Tipado Estático
 
-**Antes (v3.3):**
+**v3.3:**
 ```javascript
-// Podría fallar en runtime
-entity.posX = "invalid";  // ✅ Sin error (dinámico)
-entity.getDistancia(null); // ✅ Sin error hasta runtime
+entity.posX = "invalid";   // ✅ Sin error (runtime)
+entity.getDistancia(null); // ✅ Sin error hasta ejecución
 ```
 
-**Después (v3.5):**
+**v3.5:**
 ```typescript
-entity.posX = "invalid";  // ❌ Error de compilación (Type 'string' is not assignable to type 'number')
-entity.getDistancia(null); // ❌ Error de compilación (Argument of type 'null' is not assignable to type 'Entity')
+entity.posX = "invalid";   // ❌ Error de compilación
+entity.getDistancia(null); // ❌ Error de compilación
 ```
 
 ### 2. Modularidad
 
-**Antes:** 1000+ líneas en un archivo  
-**Después:** 5-6 archivos pequeños, cada uno con responsabilidad clara
+**v3.3:** 1000+ líneas en un único archivo
 
+**v3.5:** Archivos pequeños con responsabilidad única:
 ```
-GenetixEngine.ts      ~350 líneas (lógica pura)
-App.tsx              ~200 líneas (orquestador)
-ControlPanel.tsx     ~150 líneas (UI control)
-LandingPage.tsx      ~240 líneas (UI landing)
-ConsoleLog.tsx       ~50  líneas (UI logs)
-types.ts             ~30  líneas (tipos)
+GenetixEngine.ts      ~350 líneas  (lógica pura)
+App.tsx               ~350 líneas  (orquestador + audio)
+LandingPage.tsx       ~240 líneas  (UI landing)
+ControlPanel.tsx      ~150 líneas  (UI control)
+SignalLossEffect.tsx   ~80 líneas  (efecto visual)
+StatsDisplay.tsx       ~60 líneas  (estadísticas)
+ConsoleLog.tsx         ~50 líneas  (UI logs)
+RetroLCD.tsx           ~40 líneas  (display LCD)
+types.ts               ~45 líneas  (tipos)
 ```
 
 ### 3. Hot Module Replacement (HMR)
 
-**v3.3:** Cambio en archivo → F5 (refresh manual)  
-**v3.5:** Cambio en archivo → auto-actualizacion en navegador (sin perder estado)
+**v3.3:** Cambio → F5 obligatorio
 
-```bash
-npm run dev  # Dev server con HMR activado
-```
+**v3.5:** Cambio → auto-actualización en navegador sin perder estado de simulación
 
 ### 4. Build Optimization (Vite)
 
-**v3.3:** Archivos servidos tal cual (desarrollo) o concatenados (producción)  
-**v3.5:** 
-- Tree-shaking (elimina código muerto)
-- Code splitting (divide bundle en chunks)
-- Minification (comprime)
-- Source maps (debugging en producción)
-
-```bash
-npm run build  # Genera /dist optimizado
-```
+**v3.5:** `npm run build` ejecuta primero `tsc -b` (compila TS) y luego Vite (tree-shaking, minificación, source maps, chunking).
 
 ### 5. Responsividad
 
-**v3.3:** Media queries manuales en CSS  
-**v3.5:** Mobile-first con Tailwind
+**v3.5:** Mobile-first con Tailwind. Ejemplo:
 
 ```typescript
-// Stackea en móvil, lado a lado en desktop
 <div className="flex flex-col md:flex-row">
   <main className="flex-1">...</main>
   <aside className="w-full md:w-80">...</aside>
 </div>
 ```
 
-### 6. Testing Ready
+### 6. Nuevas Funcionalidades (sin equivalente en v3.3)
 
-**v3.5** está preparado para testing:
+- Sistema de audio con 5 pistas y fade automático
+- Efectos visuales: Signal Loss, Nuke, CRT flicker
+- Estadísticas detalladas de sesión (`DetailedStats`)
+- Mission ID por sesión
+- Modal de resultado final animado
+
+### 7. Testing Ready
 
 ```typescript
 // GenetixEngine.ts es una clase pura, fácil de testear
 const engine = new GenetixEngine();
 engine.init(config);
-const result = engine.update();
-// Assert...
+engine.update();
+expect(engine.getStats().allies).toBeLessThanOrEqual(75);
 
-// Componentes React pueden usar React Testing Library
+// Componentes React: usar React Testing Library
 import { render, screen } from '@testing-library/react';
 render(<ControlPanel {...props} />);
-expect(screen.getByText(/PAUSAR/)).toBeInTheDocument();
+expect(screen.getByText(/INICIAR/)).toBeInTheDocument();
 ```
 
 ---
@@ -592,8 +601,8 @@ expect(screen.getByText(/PAUSAR/)).toBeInTheDocument();
 
 ```bash
 # 1. Clonar repo
-git clone <repo_url>
-cd GenetixArenaWeb
+git clone https://github.com/Ju4nmaFd3z/Genetix_Arena_Web_Edition.git
+cd Genetix_Arena_Web_Edition
 
 # 2. Instalar dependencias
 npm install
@@ -602,7 +611,7 @@ npm install
 npm run dev
 
 # 4. Abrir en navegador
-# http://localhost:5173
+# http://localhost:3000
 ```
 
 ### Convenciones de Código
@@ -611,9 +620,7 @@ npm run dev
 
 ```typescript
 // ✅ Siempre especificar tipos
-const countAllies = (entities: Entity[]): number => {
-  return entities.length;
-};
+const countAllies = (entities: Entity[]): number => entities.length;
 
 // ❌ Evitar 'any'
 const countAllies = (entities: any): any => { ... };
@@ -622,24 +629,21 @@ const countAllies = (entities: any): any => { ... };
 #### React Components
 
 ```typescript
-// ✅ Usar FC type con props interface
+// ✅ FC type con props interface
 interface MyComponentProps {
   title: string;
   onClick: () => void;
 }
 
-const MyComponent: React.FC<MyComponentProps> = ({ title, onClick }) => {
-  return <button onClick={onClick}>{title}</button>;
-};
-
-// ❌ Sin tipos explícitos
-const MyComponent = ({ title, onClick }) => { ... };
+const MyComponent: React.FC<MyComponentProps> = ({ title, onClick }) => (
+  <button onClick={onClick}>{title}</button>
+);
 ```
 
 #### CSS (Tailwind)
 
 ```typescript
-// ✅ Usar clases Tailwind
+// ✅ Clases Tailwind
 <div className="flex gap-2 p-4 bg-space-dark">
 
 // ❌ Evitar estilos inline cuando sea posible
@@ -648,28 +652,22 @@ const MyComponent = ({ title, onClick }) => { ... };
 
 ### Añadir una Nueva Característica
 
-**Ejemplo:** Agregar botón "Export Results"
+**Ejemplo:** Añadir botón "Export Results"
 
 1. **Actualizar tipo** (`types.ts`):
 ```typescript
-interface GameStats {
-  allies: number;
-  enemies: number;
-  healers: number;
-  obstacles: number;
-  timestamp?: number;  // ← Agregar
+interface DetailedStats {
+  // ... campos existentes
+  timestamp?: number; // ← Agregar
 }
 ```
 
 2. **Actualizar lógica** (`GenetixEngine.ts`):
 ```typescript
-getStats() {
+getDetailedStats(): DetailedStats {
   return {
-    allies: this.listas.aliados.length,
-    enemies: this.listas.enemigos.length,
-    healers: this.listas.curanderos.length,
-    obstacles: this.listas.obstaculos.length,
-    timestamp: Date.now()  // ← Agregar
+    // ... campos existentes
+    timestamp: Date.now()
   };
 }
 ```
@@ -693,12 +691,12 @@ return (
 );
 ```
 
-4. **Testing** (futura: `ControlPanel.test.tsx`):
+4. **Test** (futura implementación con Vitest):
 ```typescript
 it('should export stats as JSON', () => {
   const { getByText } = render(<ControlPanel {...props} />);
   fireEvent.click(getByText(/EXPORTAR/));
-  // Assert que se descargó el archivo
+  // Assert
 });
 ```
 
@@ -707,21 +705,18 @@ it('should export stats as JSON', () => {
 #### Chrome DevTools
 
 1. **F12** → Sources tab
-2. Los archivos TypeScript están disponibles (source maps)
-3. Puedes setear breakpoints y inspeccionar variables
+2. Los archivos TypeScript están disponibles via source maps
+3. Puedes setear breakpoints e inspeccionar variables de estado
 
-#### React DevTools Extension
+#### React DevTools
 
-```bash
-# Instala extensión en Chrome
-# Luego en DevTools → Components tab
-# Inspecciona estado de componentes en tiempo real
-```
+Instala la extensión de Chrome, luego en DevTools → Components tab para inspeccionar el estado de cada componente en tiempo real.
 
 #### Console Logging
 
 ```typescript
-console.log('Engine state:', engineRef.current.getStats());
+console.log('Engine stats:', engineRef.current.getStats());
+console.log('Detailed stats:', engineRef.current.getDetailedStats());
 console.log('Config:', config);
 console.log('Logs buffer:', logs);
 ```
@@ -730,26 +725,27 @@ console.log('Logs buffer:', logs);
 
 ## Conclusión
 
-La migración de **v3.3 → v3.5** representa una evolución hacia una arquitectura profesional, mantenible y escalable. Aunque la lógica core (IA, colisiones, grid) permanece idéntica (paridad 1:1), la presentación y la estructura del código son significativamente más robustas.
+La migración de **v3.3 → v3.5** representa una evolución hacia una arquitectura profesional, mantenible y escalable. La lógica core (IA, colisiones, grid) permanece intacta con paridad 1:1, pero la estructura del código, la experiencia de desarrollo y las capacidades visuales/sonoras son significativamente superiores.
 
 ### Resumen Comparativo
 
 | Métrica | v3.3 | v3.5 |
 | :--- | :--- | :--- |
-| Líneas de código | ~1000+ | ~800 (distribuido) |
+| Líneas de código | ~1000+ | ~1350 (distribuido en 9 archivos) |
 | Tipado | Dinámico | Estático (TS) |
-| Componentes | 1 monolítico | 6 modulares |
+| Componentes | 1 monolítico | 7 modulares + 1 servicio |
 | Build time | N/A | ~2s (dev), ~5s (prod) |
-| HMR | No | Sí |
-| Responsividad | Parcial | Full |
-| Testing | Difícil | Fácil |
+| HMR | No | Sí (puerto 3000) |
+| Responsividad | Parcial | Full (mobile-first) |
+| Audio | No | 5 pistas con fade |
+| Efectos visuales | No | Signal Loss, Nuke, CRT |
+| Estadísticas | Básicas | Detalladas (DetailedStats) |
+| Testing | Difícil | Preparado (Jest/Vitest) |
 | Mantenibilidad | Baja | Alta |
 | Escalabilidad | Limitada | Alta |
 
-**v3.5 está listo para producción y futuro crecimiento.**
+**v3.5 está listo para producción y preparado para futuro crecimiento.**
 
 ---
 
-**Documentación:** Arquitectura v3.5  
-**Última Actualización:** 2026  
-**Autor:** Juanma Fernández
+**Documentación:** Arquitectura v3.5 | **Última Actualización:** 2026 | **Autor:** Juanma Fernández
