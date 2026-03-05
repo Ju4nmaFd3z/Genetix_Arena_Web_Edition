@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { GameConfig } from '../types';
-import { Sliders, Activity, Eye, Play, Pause, RotateCcw, Power, Undo2, LogOut, Radiation, AlertOctagon, Skull, Lock } from 'lucide-react';
+import { Eye, Play, Pause, RotateCcw, Power, Undo2, LogOut, Radiation, AlertOctagon, Skull, Lock, Volume2, VolumeX } from 'lucide-react';
 import RetroLCD from './RetroLCD';
 
 interface ControlPanelProps {
@@ -8,6 +8,8 @@ interface ControlPanelProps {
     isRunning: boolean;
     hasStarted: boolean;
     isGameOver: boolean;
+    isMuted: boolean;
+    onToggleMute: () => void;
     setConfig: React.Dispatch<React.SetStateAction<GameConfig>>;
     onTogglePause: () => void;
     onReset: () => void;
@@ -22,7 +24,7 @@ interface ControlPanelProps {
 }
 
 const ControlPanel: React.FC<ControlPanelProps> = ({
-    config, isRunning, hasStarted, isGameOver, setConfig,
+    config, isRunning, hasStarted, isGameOver, isMuted, onToggleMute, setConfig,
     onTogglePause, onReset, onStart, onSetDefaults, onAbort,
     isEmergencyAvailable, isExploding, hasNukeBeenUsed, onTriggerEmergency,
     lcdMessage
@@ -210,47 +212,40 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
     );
 
     return (
-        <div className="bg-gradient-to-b from-[#1a1a1a] to-black p-4 md:p-6 flex flex-col gap-6 font-mono text-sm h-full border-r border-space-border/20">
+        <div className="bg-[#08090a] p-4 md:p-6 flex flex-col gap-6 font-mono text-sm h-full border-r border-black/40 shadow-[inset_-10px_0_30px_rgba(0,0,0,0.5)] relative overflow-y-auto">
+            {/* Industrial Background Texture */}
+            <div className="absolute inset-0 opacity-5 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/brushed-alum.png')]"></div>
+
             <style>{`
-                /* Custom Range Slider Styling */
+                /* Custom Range Slider Styling - Physical Fader Look */
+                input[type=range] {
+                    -webkit-appearance: none;
+                    background: transparent;
+                }
+                input[type=range]::-webkit-slider-runnable-track {
+                    width: 100%;
+                    height: 4px;
+                    background: #000;
+                    border-radius: 2px;
+                    border: 1px solid #333;
+                    box-shadow: inset 0 1px 3px rgba(0,0,0,0.8);
+                }
                 input[type=range]::-webkit-slider-thumb {
                     -webkit-appearance: none;
-                    height: 16px;
-                    width: 16px;
-                    border-radius: 50%;
-                    background: #ffffff;
+                    height: 24px;
+                    width: 12px;
+                    border-radius: 2px;
+                    background: linear-gradient(to right, #444, #888, #444);
                     cursor: pointer;
-                    margin-top: -2px; 
-                    box-shadow: 0 0 5px rgba(0,0,0,0.5);
-                    transition: transform 0.1s;
+                    margin-top: -10px; 
+                    border: 1px solid #111;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.2);
                 }
                 input[type=range]:active::-webkit-slider-thumb {
-                    transform: scale(1.2);
-                }
-                input[type=range]::-moz-range-thumb {
-                    height: 16px;
-                    width: 16px;
-                    border: none;
-                    border-radius: 50%;
-                    background: #ffffff;
-                    cursor: pointer;
-                    box-shadow: 0 0 5px rgba(0,0,0,0.5);
-                    transition: transform 0.1s;
-                }
-                input[type=range]:active::-moz-range-thumb {
-                    transform: scale(1.2);
+                    background: linear-gradient(to right, #555, #aaa, #555);
                 }
                 
-                /* Hazard Stripes for Emergency Box */
-                .hazard-stripes {
-                    background-image: repeating-linear-gradient(
-                        45deg,
-                        #000,
-                        #000 10px,
-                        #111 10px,
-                        #111 20px
-                    );
-                }
+                /* Hazard Stripes */
                 .hazard-border {
                      background-image: repeating-linear-gradient(
                         -45deg,
@@ -277,86 +272,123 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                     0%, 100% { color: inherit; }
                     50% { color: #ef4444; }
                 }
+
+                .console-module {
+                    background: #111316;
+                    border: 1px solid #222529;
+                    border-bottom: 2px solid #000;
+                    border-right: 2px solid #000;
+                    box-shadow: inset 1px 1px 1px rgba(255,255,255,0.02);
+                    position: relative;
+                }
+
+                .module-screw {
+                    position: absolute;
+                    width: 6px;
+                    height: 6px;
+                    background: #111;
+                    border: 1px solid #444;
+                    border-radius: 50%;
+                    box-shadow: inset 0 1px 1px rgba(0,0,0,0.5);
+                }
             `}</style>
 
-            {/* Retro LCD Display & Mobile Landscape Nuke Button */}
-            <div className="mb-2 flex flex-col landscape:flex-row landscape:gap-2 landscape:items-stretch md:landscape:flex-col md:landscape:gap-0 md:landscape:items-stretch">
-                <div className="w-full landscape:flex-1 md:landscape:w-full md:landscape:flex-none">
-                    <RetroLCD
-                        message={lcdMessage?.msg || "SYSTEM OFFLINE"}
-                        type={lcdMessage?.type || 'normal'}
-                        subMessage={lcdMessage?.sub}
-                    />
-                </div>
-                {/* Nuke Button - Visible ONLY on Mobile Landscape */}
-                <div className="hidden landscape:block landscape:flex-1 md:landscape:hidden">
-                    {renderNukeButton()}
-                </div>
-            </div>
+            {/* MODULE 0: MAIN DISPLAY */}
+            <div className="console-module p-3 rounded-sm">
+                <div className="module-screw top-1 left-1"></div>
+                <div className="module-screw top-1 right-1"></div>
+                <div className="module-screw bottom-1 left-1"></div>
+                <div className="module-screw bottom-1 right-1"></div>
 
-            {/* Main Controls */}
-            <div className="flex flex-col gap-2">
-                <div className="text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-1">COMANDOS PRINCIPALES</div>
-
-                {!hasStarted ? (
-                    <button
-                        onClick={onStart}
-                        className="w-full flex items-center justify-center gap-2 p-4 bg-white text-black hover:bg-gray-200 font-bold uppercase tracking-wider text-xs transition-all animate-pulse"
-                    >
-                        <Power size={16} /> INICIAR SIMULACIÓN
-                    </button>
-                ) : isGameOver ? (
-                    <button
-                        onClick={onReset}
-                        className="w-full flex items-center justify-center gap-2 p-4 bg-white text-black hover:bg-gray-200 font-bold uppercase tracking-wider text-xs transition-all"
-                    >
-                        <RotateCcw size={16} /> REINICIAR SISTEMA
-                    </button>
-                ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                        <button
-                            onClick={() => handleProtectedAction('pause', onTogglePause)}
-                            className={`flex items-center justify-center gap-2 p-3 font-bold uppercase tracking-wider text-xs transition-all ${lockedControlId === 'pause' ? 'bg-red-900 border-red-500 text-white animate-shake' :
-                                isRunning
-                                    ? 'bg-transparent border border-space-border text-yellow-500 hover:border-yellow-500'
-                                    : 'bg-white text-black hover:bg-gray-200'
-                                }`}
-                        >
-                            {lockedControlId === 'pause' ? <><Lock size={14} /> LOCKED</> : isRunning ? <><Pause size={14} /> PAUSA</> : <><Play size={14} /> REANUDAR</>}
-                        </button>
-                        <button
-                            onClick={() => handleProtectedAction('reset', onReset)}
-                            className={`flex items-center justify-center gap-2 p-3 border font-bold uppercase tracking-wider text-xs transition-colors ${lockedControlId === 'reset' ? 'bg-red-900 border-red-500 text-white animate-shake' :
-                                'bg-transparent border-space-border text-white hover:border-red-500 hover:text-red-500'
-                                }`}
-                        >
-                            {lockedControlId === 'reset' ? <><Lock size={14} /> LOCKED</> : <><RotateCcw size={14} /> REINICIAR</>}
-                        </button>
+                <div className="absolute -top-2 left-4 px-2 bg-[#16181b] text-[8px] text-gray-500 font-bold tracking-widest border border-[#2a2d31] z-10">PRIMARY_DISPLAY_UNIT</div>
+                <div className="mb-2 flex flex-col landscape:flex-row landscape:gap-2 landscape:items-stretch md:landscape:flex-col md:landscape:gap-0 md:landscape:items-stretch">
+                    <div className="w-full landscape:flex-1 md:landscape:w-full md:landscape:flex-none">
+                        <RetroLCD
+                            message={lcdMessage?.msg || "SYSTEM OFFLINE"}
+                            type={lcdMessage?.type || 'normal'}
+                            subMessage={lcdMessage?.sub}
+                        />
                     </div>
-                )}
+                    {/* Nuke Button - Visible ONLY on Mobile Landscape */}
+                    <div className="hidden landscape:block landscape:flex-1 md:landscape:hidden">
+                        {renderNukeButton()}
+                    </div>
+                </div>
             </div>
 
-            {/* Entity Config */}
-            <div>
-                <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-4 border-b border-space-border pb-2">
-                    <Sliders size={12} />
-                    <span>PARÁMETROS {lockedControlId === 'sliders' ? <span className="text-red-500 animate-pulse font-bold ml-2">LOCKED</span> : '(REQ. REINICIO)'}</span>
-                </div>
+            {/* MODULE 1: MISSION COMMAND */}
+            <div className="console-module p-4 rounded-sm">
+                <div className="module-screw top-1 left-1"></div>
+                <div className="module-screw top-1 right-1"></div>
+                <div className="module-screw bottom-1 left-1"></div>
+                <div className="module-screw bottom-1 right-1"></div>
 
+                <div className="absolute -top-2 left-4 px-2 bg-[#16181b] text-[8px] text-gray-500 font-bold tracking-widest border border-[#2a2d31] z-10">MISSION_COMMAND_V3.5</div>
+                <div className="flex flex-col gap-3">
+                    {!hasStarted ? (
+                        <button
+                            onClick={onStart}
+                            className="w-full flex items-center justify-center gap-3 p-4 bg-[#e0e0e0] text-black hover:bg-white font-black uppercase tracking-widest text-xs transition-all shadow-[0_4px_0_#999] active:translate-y-[2px] active:shadow-[0_2px_0_#999] border-2 border-black/20 animate-pulse"
+                        >
+                            <Power size={18} /> INICIAR SIMULACIÓN
+                        </button>
+                    ) : isGameOver ? (
+                        <button
+                            onClick={onReset}
+                            className="w-full flex items-center justify-center gap-3 p-4 bg-[#e0e0e0] text-black hover:bg-white font-black uppercase tracking-widest text-xs transition-all shadow-[0_4px_0_#999] active:translate-y-[2px] active:shadow-[0_2px_0_#999] border-2 border-black/20"
+                        >
+                            <RotateCcw size={18} /> REINICIAR SISTEMA
+                        </button>
+                    ) : (
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                onClick={() => handleProtectedAction('pause', onTogglePause)}
+                                className={`flex flex-col items-center justify-center gap-1 p-3 font-bold uppercase tracking-wider text-[10px] transition-all border-2 shadow-[0_4px_0_rgba(0,0,0,0.5)] active:translate-y-[2px] active:shadow-[0_2px_0_rgba(0,0,0,0.5)] ${lockedControlId === 'pause' ? 'bg-red-900 border-red-500 text-white animate-shake' :
+                                    isRunning
+                                        ? 'bg-[#1a1a1a] border-[#333] text-amber-500 hover:border-amber-500/50'
+                                        : 'bg-white text-black hover:bg-gray-200 border-gray-400'
+                                    }`}
+                            >
+                                {lockedControlId === 'pause' ? <><Lock size={14} /> LOCKED</> : isRunning ? <><Pause size={16} /> PAUSA</> : <><Play size={16} /> REANUDAR</>}
+                            </button>
+                            <button
+                                onClick={() => handleProtectedAction('reset', onReset)}
+                                className={`flex flex-col items-center justify-center gap-1 p-3 border-2 font-bold uppercase tracking-wider text-[10px] transition-all shadow-[0_4px_0_rgba(0,0,0,0.5)] active:translate-y-[2px] active:shadow-[0_2px_0_rgba(0,0,0,0.5)] ${lockedControlId === 'reset' ? 'bg-red-900 border-red-500 text-white animate-shake' :
+                                    'bg-[#1a1a1a] border-[#333] text-gray-400 hover:border-red-500/50 hover:text-red-500'
+                                    }`}
+                            >
+                                {lockedControlId === 'reset' ? <><Lock size={14} /> LOCKED</> : <><RotateCcw size={16} /> REINICIAR</>}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* MODULE 2: ENTITY PARAMETERS */}
+            <div className="console-module p-4 rounded-sm">
+                <div className="module-screw top-1 left-1"></div>
+                <div className="module-screw top-1 right-1"></div>
+                <div className="module-screw bottom-1 left-1"></div>
+                <div className="module-screw bottom-1 right-1"></div>
+
+                <div className="absolute -top-2 left-4 px-2 bg-[#16181b] text-[8px] text-gray-500 font-bold tracking-widest border border-[#2a2d31] z-10">ENTITY_LOADOUT_CONFIG</div>
                 <div className={`space-y-4 ${lockedControlId === 'sliders' ? 'opacity-50 animate-shake' : ''}`}>
                     {[
-                        { label: 'ALIADOS', key: 'allies', color: 'text-space-ally' },
-                        { label: 'ENEMIGOS', key: 'enemies', color: 'text-space-enemy' },
-                        { label: 'CURANDEROS', key: 'healers', color: 'text-space-healer' },
-                        { label: 'OBSTÁCULOS', key: 'obstacles', color: 'text-space-obstacle' }
+                        { label: 'ALIADOS', key: 'allies', color: 'text-space-ally', led: 'bg-space-ally' },
+                        { label: 'ENEMIGOS', key: 'enemies', color: 'text-space-enemy', led: 'bg-space-enemy' },
+                        { label: 'CURANDEROS', key: 'healers', color: 'text-space-healer', led: 'bg-space-healer' },
+                        { label: 'OBSTÁCULOS', key: 'obstacles', color: 'text-space-obstacle', led: 'bg-space-obstacle' }
                     ].map((item) => {
                         const isError = errorField === item.key;
                         return (
-                            <div key={item.key} className={`flex flex-col gap-3 transition-colors duration-200 ${isError ? 'animate-shake' : ''}`}>
+                            <div key={item.key} className={`flex flex-col gap-2 transition-colors duration-200 ${isError ? 'animate-shake' : ''}`}>
                                 <div className="flex justify-between items-center">
-                                    <span className={`${isError ? 'text-red-500' : item.color} font-bold text-xs transition-colors`}>{item.label}</span>
-                                    <span className={`${isError ? 'text-red-500 font-bold' : 'text-gray-400'} text-xs transition-colors`}>
-                                        {localCounts[item.key as keyof typeof config.entityCounts]}
+                                    <span className="flex items-center gap-2">
+                                        <div className={`w-1 h-1 rounded-full ${item.led} shadow-[0_0_4px_currentColor]`}></div>
+                                        <span className={`${isError ? 'text-red-500' : 'text-gray-400'} font-bold text-[10px] transition-colors`}>{item.label}</span>
+                                    </span>
+                                    <span className={`${isError ? 'text-red-500 font-bold' : 'text-white'} text-[10px] font-mono bg-black px-1 border border-[#333]`}>
+                                        {localCounts[item.key as keyof typeof config.entityCounts].toString().padStart(3, '0')}
                                     </span>
                                 </div>
                                 <input
@@ -368,8 +400,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                                     onChange={(e) => handleLocalChange(item.key as keyof typeof config.entityCounts, parseInt(e.target.value))}
                                     onMouseUp={commitEntityChanges}
                                     onTouchEnd={commitEntityChanges}
-                                    className={`w-full h-1 rounded-lg appearance-none cursor-pointer ${isRunning ? 'bg-gray-800' : isError ? 'bg-red-900' : 'bg-space-border'
-                                        }`}
+                                    className="w-full"
                                 />
                             </div>
                         );
@@ -377,18 +408,19 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                 </div>
             </div>
 
-            {/* Simulation Options */}
-            <div>
-                <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-4 border-b border-space-border pb-2">
-                    <Activity size={12} />
-                    <span>OPCIONES DE EJECUCIÓN</span>
-                </div>
+            {/* MODULE 3: EXECUTION OPTIONS */}
+            <div className="console-module p-4 rounded-sm">
+                <div className="module-screw top-1 left-1"></div>
+                <div className="module-screw top-1 right-1"></div>
+                <div className="module-screw bottom-1 left-1"></div>
+                <div className="module-screw bottom-1 right-1"></div>
 
-                <div className="space-y-4">
-                    <div className="flex flex-col gap-3">
+                <div className="absolute -top-2 left-4 px-2 bg-[#16181b] text-[8px] text-gray-500 font-bold tracking-widest border border-[#2a2d31] z-10">EXEC_ENVIRONMENT_OPTS</div>
+                <div className="space-y-5">
+                    <div className="flex flex-col gap-2">
                         <div className="flex justify-between items-center">
-                            <span className="text-white text-xs">VELOCIDAD SIM</span>
-                            <span className="text-gray-400 text-xs">{config.renderSpeed}ms</span>
+                            <span className="text-gray-400 text-[10px] font-bold">TICK_RATE_MS</span>
+                            <span className="text-white text-[10px] font-mono bg-black px-1 border border-[#333]">{config.renderSpeed.toString().padStart(3, '0')}</span>
                         </div>
                         <input
                             type="range"
@@ -397,51 +429,76 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                             step="10"
                             value={config.renderSpeed}
                             onChange={(e) => setConfig({ ...config, renderSpeed: parseInt(e.target.value) })}
-                            className="w-full h-1 bg-space-border rounded-lg appearance-none cursor-pointer"
+                            className="w-full"
                         />
                     </div>
 
-                    <div className="flex items-center justify-between">
-                        <span className="flex items-center gap-2 text-white text-xs">
-                            <Eye size={14} /> INTERFAZ HUD (SALUD)
-                        </span>
-                        <button
-                            onClick={() => setConfig({ ...config, showHealthBars: !config.showHealthBars })}
-                            className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 focus:outline-none ${config.showHealthBars ? 'bg-white' : 'bg-space-dark border border-space-border'
-                                }`}
-                        >
-                            <span
-                                className={`inline-block h-3 w-3 transform rounded-full transition-transform duration-200 ${config.showHealthBars ? 'translate-x-5 bg-black' : 'translate-x-1 bg-gray-500'
+                    <div className="grid grid-cols-1 gap-3">
+                        <div className="flex items-center justify-between bg-black/40 p-2 border border-[#222]">
+                            <span className="flex items-center gap-2 text-gray-400 text-[10px] font-bold">
+                                <Eye size={12} /> HUD_HEALTH_BARS
+                            </span>
+                            <button
+                                onClick={() => setConfig({ ...config, showHealthBars: !config.showHealthBars })}
+                                className={`relative inline-flex h-4 w-8 items-center rounded-sm transition-colors duration-200 focus:outline-none border border-[#333] ${config.showHealthBars ? 'bg-emerald-900/50' : 'bg-black'
                                     }`}
-                            />
-                        </button>
+                            >
+                                <span
+                                    className={`inline-block h-2.5 w-2.5 transform rounded-sm transition-transform duration-200 ${config.showHealthBars ? 'translate-x-4 bg-emerald-400 shadow-[0_0_5px_#34d399]' : 'translate-x-1 bg-[#222]'
+                                        }`}
+                                />
+                            </button>
+                        </div>
+
+                        <div className="flex items-center justify-between bg-black/40 p-2 border border-[#222]">
+                            <span className="flex items-center gap-2 text-gray-400 text-[10px] font-bold">
+                                {isMuted ? <VolumeX size={12} /> : <Volume2 size={12} />} SYSTEM_AUDIO_FEED
+                            </span>
+                            <button
+                                onClick={onToggleMute}
+                                className={`relative inline-flex h-4 w-8 items-center rounded-sm transition-colors duration-200 focus:outline-none border border-[#333] ${!isMuted ? 'bg-emerald-900/50' : 'bg-black'
+                                    }`}
+                            >
+                                <span
+                                    className={`inline-block h-2.5 w-2.5 transform rounded-sm transition-transform duration-200 ${!isMuted ? 'translate-x-4 bg-emerald-400 shadow-[0_0_5px_#34d399]' : 'translate-x-1 bg-[#222]'
+                                        }`}
+                                />
+                            </button>
+                        </div>
                     </div>
 
                     {/* LAST RESORT - EMERGENCY PROTOCOL BUTTON */}
-                    <div className="mt-4 landscape:hidden md:landscape:block">
+                    <div className="mt-2 landscape:hidden md:landscape:block">
                         {renderNukeButton()}
                     </div>
                 </div>
             </div>
 
-            {/* Bottom Actions: Defaults & Abort */}
-            <div className="mt-auto pt-4 pb-6 border-t border-space-border flex flex-col gap-3">
-                <button
-                    onClick={() => handleProtectedAction('defaults', onSetDefaults)}
-                    disabled={isRunning}
-                    className={`w-full flex items-center justify-center gap-2 p-3 text-xs uppercase tracking-widest font-bold border border-dashed border-space-border text-gray-500 hover:text-white hover:border-white transition-all ${isRunning ? 'opacity-30 cursor-not-allowed' : ''}`}
-                >
-                    <Undo2 size={14} /> RESTABLECER VALORES
-                </button>
+            {/* MODULE 4: SYSTEM UTILITIES */}
+            <div className="mt-auto pt-4 pb-6 flex flex-col gap-3">
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => handleProtectedAction('defaults', onSetDefaults)}
+                        disabled={isRunning}
+                        className={`flex-1 flex items-center justify-center gap-2 p-3 text-[9px] uppercase tracking-widest font-bold border border-[#222] bg-[#121212] text-gray-500 hover:text-white hover:bg-[#1a1a1a] transition-all shadow-[0_2px_0_#000] active:translate-y-[1px] active:shadow-none ${isRunning ? 'opacity-30 cursor-not-allowed' : ''}`}
+                    >
+                        <Undo2 size={12} /> DEFAULTS
+                    </button>
 
-                <button
-                    onClick={onAbort}
-                    className="w-full flex items-center justify-center gap-2 p-3 text-xs uppercase tracking-widest font-bold border border-red-900/30 text-red-900 hover:bg-red-900/10 hover:border-red-600 hover:text-red-500 transition-all"
-                >
-                    <LogOut size={14} /> ABORTAR MISIÓN
-                </button>
+                    <button
+                        onClick={onAbort}
+                        className="flex-1 flex items-center justify-center gap-2 p-3 text-[9px] uppercase tracking-widest font-bold border border-red-900/30 bg-[#1a0000] text-red-900 hover:bg-red-900/20 hover:border-red-600 hover:text-red-500 transition-all shadow-[0_2px_0_#000] active:translate-y-[1px] active:shadow-none"
+                    >
+                        <LogOut size={12} /> ABORT_OP
+                    </button>
+                </div>
+
+                <div className="flex items-center justify-center gap-2 opacity-40">
+                    <div className="h-[1px] flex-1 bg-gray-700"></div>
+                    <div className="text-[7px] text-gray-400 font-bold tracking-[0.3em]">GENETIX_CORP_SECURE_LINK</div>
+                    <div className="h-[1px] flex-1 bg-gray-700"></div>
+                </div>
             </div>
-
         </div>
     );
 };

@@ -4,7 +4,7 @@ import ControlPanel from './components/ControlPanel';
 import ConsoleLog from './components/ConsoleLog';
 import { GenetixEngine } from './services/GenetixEngine';
 import { GameConfig, GameStats, LogEntry, DetailedStats } from './types';
-import { Heart, ShieldAlert, Cross, Box, AlertTriangle, Activity, CheckCircle2, XCircle, Crosshair, BarChart2, X } from 'lucide-react';
+import { Heart, ShieldAlert, Cross, Box, AlertTriangle, Activity, Crosshair, BarChart2, X, Volume2, VolumeX, Skull } from 'lucide-react';
 import StatsDisplay from './components/StatsDisplay';
 
 // Default Config
@@ -257,7 +257,6 @@ const App: React.FC = () => {
             [landingAudioRef, gameAudioRef, alliesWinAudioRef, enemiesWinAudioRef, drawAudioRef]
                 .forEach(r => r.current?.pause());
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // [AUDIO SYSTEM] - Cancela el fade activo (si lo hay)
@@ -410,9 +409,6 @@ const App: React.FC = () => {
             if (ctx) engineRef.current.draw(ctx, config);
         }
         return () => cancelAnimationFrame(animationFrameRef.current);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        // loopRef es un ref (referencia estable), no necesita estar en deps.
-        // config se incluye para forzar redibujado cuando cambia showHealthBars.
     }, [isRunning, config]);
 
     // Auto-Restart on Entity Config Change
@@ -454,55 +450,72 @@ const App: React.FC = () => {
         }, 500); // 500ms fade out duration
     };
 
-    const getResultStyles = () => {
+    interface ResultStyle {
+        borderColor: string;
+        textColor: string;
+        glow: string;
+        title: string;
+        icon: React.ReactNode;
+        bgGradient: string;
+        stamp: string;
+        classification: string;
+    }
+
+    const getResultStyles = (): ResultStyle => {
         switch (gameResult) {
             case 'ALLIES_WIN':
                 return {
                     borderColor: 'border-space-ally',
                     textColor: 'text-space-ally',
-                    glow: 'shadow-[0_0_50px_-12px_rgba(16,185,129,0.5)]',
-                    title: 'VICTORIA ALIADA',
-                    icon: <CheckCircle2 size={80} className="text-space-ally drop-shadow-[0_0_10px_rgba(16,185,129,0.8)] animate-bounce" />,
-                    bgGradient: 'from-green-900/20 to-black'
+                    glow: 'shadow-[0_0_50px_-12px_rgba(16,185,129,0.3)]',
+                    title: 'OBJETIVO_CUMPLIDO',
+                    icon: <ShieldAlert size={64} className="text-space-ally drop-shadow-[0_0_15px_rgba(16,185,129,0.4)]" />,
+                    bgGradient: 'from-green-900/10 to-black',
+                    stamp: 'CONFIRMADO',
+                    classification: 'NIVEL_ALFA'
                 };
             case 'ENEMIES_WIN':
                 return {
                     borderColor: 'border-space-enemy',
                     textColor: 'text-space-enemy',
-                    glow: 'shadow-[0_0_50px_-12px_rgba(239,68,68,0.5)]',
-                    title: 'VICTORIA HOSTIL',
-                    icon: <XCircle size={80} className="text-space-enemy drop-shadow-[0_0_10px_rgba(239,68,68,0.8)] animate-pulse" />,
-                    bgGradient: 'from-red-900/20 to-black'
+                    glow: 'shadow-[0_0_50px_-12px_rgba(239,68,68,0.3)]',
+                    title: 'MISIÓN_FALLIDA',
+                    icon: <Skull size={64} className="text-space-enemy drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]" />,
+                    bgGradient: 'from-red-900/10 to-black',
+                    stamp: 'CRÍTICO',
+                    classification: 'FALLO_SISTEMA'
                 };
             default:
                 return {
                     borderColor: 'border-yellow-500',
                     textColor: 'text-yellow-500',
-                    glow: 'shadow-[0_0_50px_-12px_rgba(234,179,8,0.5)]',
-                    title: 'EMPATE TÁCTICO',
-                    icon: <AlertTriangle size={80} className="text-yellow-500 drop-shadow-[0_0_10px_rgba(234,179,8,0.8)]" />,
-                    bgGradient: 'from-yellow-900/20 to-black'
+                    glow: 'shadow-[0_0_50px_-12px_rgba(234,179,8,0.3)]',
+                    title: 'ESTANCAMIENTO',
+                    icon: <AlertTriangle size={64} className="text-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.4)]" />,
+                    bgGradient: 'from-yellow-900/10 to-black',
+                    stamp: 'DISPUTADO',
+                    classification: 'ZONA_GRIS'
                 };
         }
     };
 
 
     const getLCDMessage = () => {
-        if (isExploding) return { msg: "CRITICAL: OMEGA SEQUENCE", type: 'critical' as const };
-        if (hasNukeBeenUsed && !gameResult) return { msg: "POST-DETONATION: FALLOUT", type: 'warning' as const };
+        if (isExploding) return { msg: "ERR: OMEGA_PROTOCOL_ACTIVE", type: 'critical' as const, sub: "DETONATION_IMMINENT" };
+        if (hasNukeBeenUsed && !gameResult) return { msg: "POST_DETONATION_STATUS", type: 'warning' as const, sub: "ATMOSPHERIC_FALLOUT_DETECTED" };
 
-        if (gameResult === 'ALLIES_WIN') return { msg: "MISSION ACCOMPLISHED", type: 'success' as const };
-        if (gameResult === 'ENEMIES_WIN') return { msg: "MISSION FAILED: SIGNAL LOST", type: 'critical' as const };
-        if (gameResult === 'DRAW') return { msg: "STALEMATE: CEASEFIRE", type: 'warning' as const };
+        if (gameResult === 'ALLIES_WIN') return { msg: "MISSION_SUCCESS", type: 'success' as const, sub: "ALL_OBJECTIVES_COMPLETED" };
+        if (gameResult === 'ENEMIES_WIN') return { msg: "MISSION_FAILURE", type: 'critical' as const, sub: "SIGNAL_LOST_IN_SECTOR" };
+        if (gameResult === 'DRAW') return { msg: "STALEMATE_DETECTED", type: 'warning' as const, sub: "MUTUAL_ELIMINATION_CONFIRMED" };
 
         if (isRunning) {
-            if (stats.allies < 10 && stats.allies > 0) return { msg: "WARNING: ALLY CRITICAL", type: 'warning' as const };
-            if (stats.enemies < 10 && stats.enemies > 0) return { msg: "TARGETS NEAR ELIMINATION", type: 'success' as const };
-            return { msg: "COMBAT IN PROGRESS...", type: 'normal' as const };
+            if (stats.allies < 10 && stats.allies > 0) return { msg: "WARNING: ALLY_CRITICAL", type: 'warning' as const, sub: "REINFORCEMENTS_REQUIRED" };
+            if (stats.enemies < 10 && stats.enemies > 0) return { msg: "HVT_NEAR_ELIMINATION", type: 'success' as const, sub: "MAINTAIN_FIRE_PRESSURE" };
+            return { msg: "ENGAGEMENT_IN_PROGRESS", type: 'normal' as const, sub: "REALTIME_FEED_ACTIVE" };
         }
-        if (hasStarted && !isRunning && !gameResult) return { msg: "SIMULATION PAUSED", type: 'warning' as const };
-        if (!hasStarted) return { msg: "SYSTEM READY. AWAITING INPUT.", type: 'normal' as const };
-        return { msg: "SYSTEM IDLE", type: 'normal' as const };
+        if (hasStarted && !isRunning && !gameResult) return { msg: "SIMULATION_SUSPENDED", type: 'warning' as const, sub: "AWAITING_COMMAND_RESUME" };
+        if (!hasStarted) return { msg: "READY_FOR_DEPLOYMENT", type: 'normal' as const, sub: "AWAITING_INITIALIZATION" };
+        return { msg: "SYSTEM_IDLE", type: 'normal' as const, sub: "STANDBY_MODE" };
     };
 
     const renderContent = () => {
@@ -680,45 +693,56 @@ const App: React.FC = () => {
                 <aside className="w-full md:w-80 border-t md:border-t-0 md:border-l border-space-border bg-space-black flex flex-col h-auto md:h-full z-30 order-2 md:order-2 shrink-0">
 
                     {/* Stats Header */}
-                    <div className="p-2 md:p-4 border-b border-space-border bg-space-panel">
-                        <div className="flex justify-between items-center mb-2 md:mb-3">
-                            <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500 block text-center md:text-left">TELEMETRÍA EN VIVO</span>
+                    <div className="p-4 border-b border-black/40 bg-[#08090a]">
+                        <div className="flex justify-between items-center mb-4">
+                            <div className="flex items-center gap-2">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_5px_#10b981]"></div>
+                                <span className="text-[10px] uppercase tracking-[0.2em] text-gray-300 font-bold">LIVE_TELEMETRY_FEED</span>
+                            </div>
                             <button
                                 onClick={() => setShowStatsModal(true)}
-                                className="text-gray-500 hover:text-white transition-colors p-1 rounded hover:bg-white/10"
+                                className="text-gray-400 hover:text-white transition-colors p-1.5 rounded bg-white/5 border border-white/10"
                                 title="Ver Análisis Detallado"
                             >
                                 <BarChart2 size={14} />
                             </button>
                         </div>
-                        <div className="grid grid-cols-4 md:grid-cols-2 gap-2">
-                            {/* Stat Card */}
-                            <div className="bg-space-dark p-1.5 md:p-3 border border-space-border/50 flex flex-col justify-center items-center md:items-start">
-                                <div className="text-space-ally flex items-center gap-1.5 mb-1 text-[9px] md:text-xs font-bold truncate">
-                                    <ShieldAlert size={10} className="shrink-0 md:w-3 md:h-3" /> <span className="hidden md:inline">ALIADOS</span><span className="md:hidden">ALI</span>
-                                </div>
-                                <div className="text-lg md:text-2xl font-mono text-white leading-none">{stats.allies}</div>
-                            </div>
 
-                            <div className="bg-space-dark p-1.5 md:p-3 border border-space-border/50 flex flex-col justify-center items-center md:items-start">
-                                <div className="text-space-enemy flex items-center gap-1.5 mb-1 text-[9px] md:text-xs font-bold truncate">
-                                    <Cross size={10} className="rotate-45 shrink-0 md:w-3 md:h-3" /> <span className="hidden md:inline">ENEMIGOS</span><span className="md:hidden">ENE</span>
-                                </div>
-                                <div className="text-lg md:text-2xl font-mono text-white leading-none">{stats.enemies}</div>
-                            </div>
+                        {/* Integrated Monitor Look */}
+                        <div className="relative p-2 bg-[#16181b] border-2 border-[#2a2d31] rounded-sm shadow-[inset_0_0_20px_rgba(0,0,0,0.8)] overflow-hidden">
+                            {/* CRT Effect */}
+                            <div className="absolute inset-0 pointer-events-none opacity-10 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,0,0.06))] bg-[length:100%_2px,3px_100%] z-20"></div>
+                            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none z-10"></div>
 
-                            <div className="bg-space-dark p-1.5 md:p-3 border border-space-border/50 flex flex-col justify-center items-center md:items-start">
-                                <div className="text-space-healer flex items-center gap-1.5 mb-1 text-[9px] md:text-xs font-bold truncate">
-                                    <Heart size={10} className="shrink-0 md:w-3 md:h-3" /> <span className="hidden md:inline">MÉDICOS</span><span className="md:hidden">MED</span>
+                            <div className="grid grid-cols-2 gap-2 relative z-0">
+                                {/* Stat Card */}
+                                <div className="bg-black/40 p-2 border border-white/5 flex flex-col">
+                                    <div className="text-space-ally flex items-center gap-1.5 mb-1 text-[8px] font-bold uppercase tracking-tighter opacity-80">
+                                        <ShieldAlert size={10} /> ALIADOS
+                                    </div>
+                                    <div className="text-xl font-mono text-white leading-none drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]">{stats.allies.toString().padStart(3, '0')}</div>
                                 </div>
-                                <div className="text-lg md:text-2xl font-mono text-white leading-none">{stats.healers}</div>
-                            </div>
 
-                            <div className="bg-space-dark p-1.5 md:p-3 border border-space-border/50 flex flex-col justify-center items-center md:items-start">
-                                <div className="text-space-obstacle flex items-center gap-1.5 mb-1 text-[9px] md:text-xs font-bold truncate">
-                                    <Box size={10} className="shrink-0 md:w-3 md:h-3" /> <span className="hidden md:inline">BLOQUES</span><span className="md:hidden">OBS</span>
+                                <div className="bg-black/40 p-2 border border-white/5 flex flex-col">
+                                    <div className="text-space-enemy flex items-center gap-1.5 mb-1 text-[8px] font-bold uppercase tracking-tighter opacity-80">
+                                        <Cross size={10} className="rotate-45" /> ENEMIGOS
+                                    </div>
+                                    <div className="text-xl font-mono text-white leading-none drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]">{stats.enemies.toString().padStart(3, '0')}</div>
                                 </div>
-                                <div className="text-lg md:text-2xl font-mono text-white leading-none">{stats.obstacles}</div>
+
+                                <div className="bg-black/40 p-2 border border-white/5 flex flex-col">
+                                    <div className="text-space-healer flex items-center gap-1.5 mb-1 text-[8px] font-bold uppercase tracking-tighter opacity-80">
+                                        <Heart size={10} /> MÉDICOS
+                                    </div>
+                                    <div className="text-xl font-mono text-white leading-none drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]">{stats.healers.toString().padStart(3, '0')}</div>
+                                </div>
+
+                                <div className="bg-black/40 p-2 border border-white/5 flex flex-col">
+                                    <div className="text-space-obstacle flex items-center gap-1.5 mb-1 text-[8px] font-bold uppercase tracking-tighter opacity-80">
+                                        <Box size={10} /> BLOQUES
+                                    </div>
+                                    <div className="text-xl font-mono text-white leading-none drop-shadow-[0_0_5px_rgba(255,255,255,0.3)]">{stats.obstacles.toString().padStart(3, '0')}</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -730,6 +754,8 @@ const App: React.FC = () => {
                             isRunning={isRunning}
                             hasStarted={hasStarted}
                             isGameOver={!!gameResult}
+                            isMuted={isMuted}
+                            onToggleMute={() => setIsMuted(!isMuted)}
                             setConfig={setConfig}
                             onTogglePause={() => setIsRunning(!isRunning)}
                             onReset={handleReset}
@@ -750,67 +776,127 @@ const App: React.FC = () => {
 
                 {/* Modal Result Overlay - MOVED HERE TO BE GLOBAL */}
                 {gameResult && resultStyles && (
-                    <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-500 cursor-default">
+                    <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-500 cursor-default">
                         <div className={`
-                            relative bg-space-panel/95 backdrop-blur-xl border-2 ${resultStyles.borderColor} ${resultStyles.glow}
-                            w-full max-w-md shadow-2xl transform scale-90 md:scale-100 flex flex-col max-h-[90vh]
+                            relative bg-[#0a0b0d] border-2 ${resultStyles.borderColor} ${resultStyles.glow}
+                            w-full max-w-lg shadow-[0_0_100px_rgba(0,0,0,1)] transform scale-95 md:scale-100 flex flex-col max-h-[95vh] overflow-hidden
                         `}>
-                            {/* Tech Background Pattern in Modal */}
-                            <div className={`absolute inset-0 bg-gradient-to-b ${resultStyles.bgGradient} opacity-50 pointer-events-none`}></div>
-                            <div className="absolute inset-0 bg-grid-pattern bg-[length:20px_20px] opacity-10 pointer-events-none"></div>
+                            {/* Tech Background Pattern */}
+                            <div className={`absolute inset-0 bg-gradient-to-b ${resultStyles.bgGradient} opacity-30 pointer-events-none`}></div>
+                            <div className="absolute inset-0 bg-grid-pattern bg-[length:30px_30px] opacity-5 pointer-events-none"></div>
+
+                            {/* Tactical Watermark */}
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.02] rotate-[-25deg] select-none">
+                                <div className="text-[140px] font-black tracking-tighter leading-none text-white">
+                                    CLASSIFIED
+                                </div>
+                            </div>
+
+                            {/* Classification Header Bar */}
+                            <div className={`h-1.5 w-full bg-gradient-to-r ${resultStyles.borderColor.replace('border-', 'from-')}/50 via-transparent to-transparent opacity-50`}></div>
 
                             {/* Modal Header */}
-                            <div className={`bg-black/40 border-b ${resultStyles.borderColor} border-opacity-30 p-4 flex justify-between items-center relative z-10`}>
-                                <div className="flex items-center gap-2">
-                                    <Activity size={16} className={resultStyles.textColor} />
-                                    <span className="text-[10px] uppercase tracking-[0.2em] text-gray-400">REPORTE DE MISIÓN</span>
+                            <div className="bg-black/80 border-b border-white/5 p-5 flex justify-between items-center relative z-10">
+                                <div className="flex flex-col">
+                                    <div className="flex items-center gap-2 mb-0.5">
+                                        <div className={`w-1.5 h-1.5 rounded-full ${resultStyles.textColor.replace('text-', 'bg-')} animate-pulse`}></div>
+                                        <span className="text-[10px] uppercase tracking-[0.4em] text-gray-400 font-black">DEBRIEFING_PROTOCOL_V3.5</span>
+                                    </div>
+                                    <div className="text-[8px] text-gray-600 font-mono tracking-widest uppercase">ENCRYPTED_CHANNEL_SECURE</div>
                                 </div>
-                                <div className="flex items-center gap-4">
-                                    <div className="text-[10px] text-gray-500 font-mono">ID: {missionId}</div>
+                                <div className="flex items-center gap-3">
+                                    <div className="flex flex-col items-end mr-2">
+                                        <div className="text-[9px] text-gray-500 font-mono">OP_ID: {missionId}</div>
+                                        <div className="text-[7px] text-gray-600 font-mono uppercase">AUTH_LVL: {resultStyles.classification}</div>
+                                    </div>
+                                    <div className="h-8 w-[1px] bg-white/10 mx-1"></div>
                                     <button
-                                        onClick={() => setGameResult(null)}
-                                        className="text-gray-500 hover:text-white transition-colors hover:bg-white/10 p-1 rounded flex items-center justify-center"
+                                        onClick={() => setIsMuted(!isMuted)}
+                                        className={`transition-colors p-1.5 rounded-sm flex items-center justify-center ${isMuted ? 'text-gray-600 hover:text-white' : 'text-space-ally hover:bg-space-ally/10'}`}
                                     >
-                                        <X size={16} />
+                                        {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                                    </button>
+                                    <button
+                                        onClick={handleReset}
+                                        className="text-gray-600 hover:text-white transition-colors hover:bg-white/5 p-1.5 rounded-sm flex items-center justify-center"
+                                    >
+                                        <X size={18} />
                                     </button>
                                 </div>
                             </div>
 
                             {/* Modal Content */}
-                            <div className="p-6 md:p-8 flex flex-col items-center text-center relative z-10 overflow-y-auto">
-                                <div className="mb-6">
-                                    {resultStyles.icon}
+                            <div className="p-8 md:p-10 flex flex-col relative z-10 overflow-y-auto">
+                                {/* Tactical Stamp */}
+                                <div className={`absolute top-0 right-10 border-4 ${resultStyles.borderColor} ${resultStyles.textColor} px-4 py-2 font-black text-sm rotate-[12deg] opacity-20 border-double tracking-[0.3em] uppercase pointer-events-none select-none z-0`}>
+                                    {resultStyles.stamp}
                                 </div>
 
-                                <h2 className={`text-2xl md:text-4xl font-bold tracking-tighter ${resultStyles.textColor} mb-2 drop-shadow-md`}>
-                                    {resultStyles.title}
-                                </h2>
-                                <p className="text-gray-400 text-xs font-mono uppercase tracking-widest mb-8">
-                                    Ciclo de simulación completado
-                                </p>
-
-                                {/* Stats Report Grid */}
-                                <div className="grid grid-cols-2 gap-px bg-space-border w-full border border-space-border mb-4">
-                                    <div className="bg-space-dark p-3">
-                                        <div className="text-[10px] text-gray-500 uppercase mb-1">Supervivientes</div>
-                                        <div className="text-xl font-mono text-space-ally">{stats.allies}</div>
+                                <div className="flex flex-col md:flex-row items-center md:items-start gap-8 mb-10 relative z-10">
+                                    <div className="relative shrink-0">
+                                        <div className={`absolute inset-0 blur-3xl ${resultStyles.textColor} opacity-10`}></div>
+                                        <div className={`p-4 border border-white/10 bg-black/40 rounded-sm shadow-2xl`}>
+                                            {resultStyles.icon}
+                                        </div>
                                     </div>
-                                    <div className="bg-space-dark p-3">
-                                        <div className="text-[10px] text-gray-500 uppercase mb-1">Hostiles Rest.</div>
-                                        <div className="text-xl font-mono text-space-enemy">{stats.enemies}</div>
+
+                                    <div className="flex flex-col text-center md:text-left pt-2 min-w-0 flex-1">
+                                        <h2 className={`text-base sm:text-xl md:text-2xl font-black tracking-tighter ${resultStyles.textColor} mb-2 drop-shadow-2xl uppercase italic leading-tight whitespace-nowrap overflow-hidden text-ellipsis`}>
+                                            {resultStyles.title}
+                                        </h2>
+                                        <div className="flex items-center justify-center md:justify-start gap-3">
+                                            <div className="h-[1px] w-8 bg-white/20"></div>
+                                            <p className="text-gray-500 text-[10px] font-mono uppercase tracking-[0.4em] whitespace-nowrap">
+                                                STATUS: {resultStyles.classification}
+                                            </p>
+                                            <div className="h-[1px] flex-1 bg-white/20 hidden md:block"></div>
+                                        </div>
+                                        <div className="mt-4 text-[9px] text-gray-600 font-mono tracking-widest uppercase">
+                                            TIMESTAMP: {new Date().toISOString().replace('T', ' ').substring(0, 19)}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Stats Report Grid - More Uniform */}
+                                <div className="grid grid-cols-2 gap-4 w-full mb-8">
+                                    <div className="bg-black/60 p-5 border border-white/5 relative overflow-hidden group">
+                                        <div className="absolute top-0 left-0 w-1 h-full bg-space-ally opacity-50"></div>
+                                        <div className="text-[9px] text-gray-500 uppercase tracking-[0.2em] font-black mb-2">UNIDADES_ACTIVAS</div>
+                                        <div className="flex items-baseline gap-2">
+                                            <div className="text-4xl font-mono text-space-ally leading-none tracking-tighter">{stats.allies.toString().padStart(3, '0')}</div>
+                                            <div className="text-[10px] text-space-ally/40 font-bold uppercase">UNITS</div>
+                                        </div>
+                                    </div>
+                                    <div className="bg-black/60 p-5 border border-white/5 relative overflow-hidden group">
+                                        <div className="absolute top-0 left-0 w-1 h-full bg-space-enemy opacity-50"></div>
+                                        <div className="text-[9px] text-gray-500 uppercase tracking-[0.2em] font-black mb-2">HOSTILES_REST.</div>
+                                        <div className="flex items-baseline gap-2">
+                                            <div className="text-4xl font-mono text-space-enemy leading-none tracking-tighter">{stats.enemies.toString().padStart(3, '0')}</div>
+                                            <div className="text-[10px] text-space-enemy/40 font-bold uppercase">UNITS</div>
+                                        </div>
                                     </div>
                                 </div>
 
                                 {detailedStats && (
-                                    <div className="w-full border-t border-space-border pt-4">
-                                        <div className="text-[10px] uppercase tracking-[0.2em] text-gray-500 mb-2 text-left">ANÁLISIS DE COMBATE</div>
-                                        <StatsDisplay stats={detailedStats} />
+                                    <div className="w-full space-y-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="text-[9px] uppercase tracking-[0.5em] text-gray-600 font-black whitespace-nowrap">ANÁLISIS_POST_COMBATE</div>
+                                            <div className="h-[1px] flex-1 bg-white/5"></div>
+                                        </div>
+                                        <div className="bg-black/20 p-2 border border-white/5">
+                                            <StatsDisplay stats={detailedStats} />
+                                        </div>
                                     </div>
                                 )}
+
+                                {/* Buttons removed as per user request */}
                             </div>
 
+                            {/* Hazard Stripes Footer */}
+                            <div className="h-3 w-full hazard-border opacity-20 mt-auto"></div>
+
                             {/* Scanline */}
-                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent h-[10px] w-full animate-[scan_4s_linear_infinite] pointer-events-none opacity-20"></div>
+                            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent h-[20px] w-full animate-[scan_6s_linear_infinite] pointer-events-none opacity-10"></div>
                         </div>
                     </div>
                 )}

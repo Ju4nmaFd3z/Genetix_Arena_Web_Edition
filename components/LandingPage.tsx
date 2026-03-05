@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ArrowRight, Github, ExternalLink, Cpu, X, ShieldAlert, Cross, Heart, Box, AlertTriangle, Volume2, VolumeX } from 'lucide-react';
 
 interface LandingPageProps {
@@ -122,7 +122,7 @@ const ChaseAnimation = () => {
         setEntities(prev => [...prev, ally, enemy]);
     };
 
-    const animate = (time: number) => {
+    const animate = useCallback((time: number) => {
         if (!lastTimeRef.current) lastTimeRef.current = time;
         const deltaTime = time - lastTimeRef.current;
         lastTimeRef.current = time;
@@ -154,12 +154,12 @@ const ChaseAnimation = () => {
         }).filter(e => e.opacity > 0));
 
         requestRef.current = requestAnimationFrame(animate);
-    };
+    }, [dimensions.width, dimensions.height]);
 
     useEffect(() => {
         requestRef.current = requestAnimationFrame(animate);
         return () => cancelAnimationFrame(requestRef.current);
-    }, [dimensions]);
+    }, [animate]);
 
     return (
         <div
