@@ -21,13 +21,14 @@ interface ControlPanelProps {
     hasNukeBeenUsed?: boolean;
     onTriggerEmergency?: () => void;
     lcdMessage?: { msg: string, type: 'normal' | 'warning' | 'critical' | 'success', sub?: string };
+    configChanged?: boolean;
 }
 
 const ControlPanel: React.FC<ControlPanelProps> = ({
     config, isRunning, hasStarted, isGameOver, isMuted, onToggleMute, setConfig,
     onTogglePause, onReset, onStart, onSetDefaults, onAbort,
     isEmergencyAvailable, isExploding, hasNukeBeenUsed, onTriggerEmergency,
-    lcdMessage
+    lcdMessage, configChanged
 }) => {
 
     // Local state for sliders to support update-on-release
@@ -60,7 +61,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
             setTimeout(() => setErrorField(null), 500);
         } else {
             // Cap maximum
-            finalValue = Math.max(0, Math.min(200, value));
+            finalValue = Math.max(0, Math.min(150, value));
         }
 
         setLocalCounts(prev => ({
@@ -330,19 +331,29 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
 
                 <div className="absolute -top-2 left-4 px-2 bg-[#16181b] text-[8px] text-gray-500 font-bold tracking-widest border border-[#2a2d31] z-10">MISSION_COMMAND_V3.5</div>
                 <div className="mt-2 flex flex-col gap-3">
-                    {!hasStarted ? (
+                    {!hasStarted && !configChanged ? (
                         <button
                             onClick={onStart}
                             className="w-full flex items-center justify-center gap-3 p-4 bg-[#e0e0e0] text-black hover:bg-white font-black uppercase tracking-widest text-xs transition-all shadow-[0_4px_0_#999] active:translate-y-[2px] active:shadow-[0_2px_0_#999] border-2 border-black/20 animate-pulse"
                         >
                             <Power size={18} /> INICIAR SIMULACIÓN
                         </button>
-                    ) : isGameOver ? (
+                    ) : isGameOver || configChanged ? (
                         <button
                             onClick={onReset}
-                            className="w-full flex items-center justify-center gap-3 p-4 bg-[#e0e0e0] text-black hover:bg-white font-black uppercase tracking-widest text-xs transition-all shadow-[0_4px_0_#999] active:translate-y-[2px] active:shadow-[0_2px_0_#999] border-2 border-black/20"
+                            className={`
+                                w-full flex items-center justify-center gap-3 p-4 
+                                font-black uppercase tracking-widest text-xs transition-all 
+                                shadow-[0_4px_0_rgba(0,0,0,0.5)] active:translate-y-[2px] active:shadow-[0_2px_0_rgba(0,0,0,0.5)] 
+                                border-2 
+                                ${configChanged
+                                    ? 'bg-amber-500/10 text-amber-500 border-amber-500/50 hover:bg-amber-500/20 hover:border-amber-400 animate-pulse shadow-[0_0_15px_rgba(245,158,11,0.2)]'
+                                    : 'bg-[#e0e0e0] text-black hover:bg-white border-black/20 shadow-[0_4px_0_#999] active:shadow-[0_2px_0_#999]'
+                                }
+                            `}
                         >
-                            <RotateCcw size={18} /> REINICIAR SISTEMA
+                            <RotateCcw size={18} className={configChanged ? "animate-spin-slow" : ""} />
+                            {configChanged ? 'APLICAR CAMBIOS Y REINICIAR' : 'REINICIAR SISTEMA'}
                         </button>
                     ) : (
                         <div className="grid grid-cols-2 gap-3">

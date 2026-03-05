@@ -291,8 +291,9 @@ const App: React.FC = () => {
         incomingTargetVol: number
     ) => {
         stopFade();
-        const STEPS = 30;
-        const INTERVAL = 1500 / STEPS;
+        const STEPS = 50; // Increased steps for smoothness
+        const DURATION = 2000; // Increased duration to 2s
+        const INTERVAL = DURATION / STEPS;
         const startVol = outgoing.volume; // Partir del volumen real actual
 
         incoming.currentTime = 0;
@@ -303,8 +304,11 @@ const App: React.FC = () => {
         activeFadeRef.current = setInterval(() => {
             step++;
             const t = step / STEPS;
-            outgoing.volume = Math.max(0, startVol * (1 - t));
-            incoming.volume = Math.min(incomingTargetVol, incomingTargetVol * t);
+            // Use ease-in-out curve for smoother transition
+            const ease = t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+
+            outgoing.volume = Math.max(0, startVol * (1 - ease));
+            incoming.volume = Math.min(incomingTargetVol, incomingTargetVol * ease);
 
             if (step >= STEPS) {
                 stopFade();
@@ -346,14 +350,17 @@ const App: React.FC = () => {
             // Reanudar la pista que corresponde exactamente al estado actual
             if (view === 'landing') {
                 landingAudioRef.current?.play().catch(() => { });
-            } else if (gameResult === 'ALLIES_WIN') {
-                alliesWinAudioRef.current?.play().catch(() => { });
-            } else if (gameResult === 'ENEMIES_WIN') {
-                enemiesWinAudioRef.current?.play().catch(() => { });
-            } else if (gameResult !== null) {
-                drawAudioRef.current?.play().catch(() => { });
-            } else {
-                gameAudioRef.current?.play().catch(() => { });
+            } else if (view === 'game') {
+                if (gameResult === 'ALLIES_WIN') {
+                    alliesWinAudioRef.current?.play().catch(() => { });
+                } else if (gameResult === 'ENEMIES_WIN') {
+                    enemiesWinAudioRef.current?.play().catch(() => { });
+                } else if (gameResult !== null) {
+                    drawAudioRef.current?.play().catch(() => { });
+                } else {
+                    // Si estamos en juego y no hay resultado, música de batalla
+                    gameAudioRef.current?.play().catch(() => { });
+                }
             }
         }
     };
@@ -373,7 +380,17 @@ const App: React.FC = () => {
         const outgoingDefVol = view === 'landing' ? VOL.battle : VOL.landing;
 
         if (!incoming || !outgoing) return;
-        crossfade(outgoing, outgoingDefVol, incoming, incomingVol);
+
+        // Si vamos a game, asegurarnos de que la música de batalla suene
+        if (view === 'game') {
+            stopFade();
+            outgoing.pause();
+            incoming.currentTime = 0;
+            incoming.volume = incomingVol;
+            incoming.play().catch(() => { });
+        } else {
+            crossfade(outgoing, outgoingDefVol, incoming, incomingVol);
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [view]);
 
@@ -389,7 +406,14 @@ const App: React.FC = () => {
                         drawAudioRef.current;
 
             if (!resultTrack || !gameAudioRef.current) return;
-            crossfade(gameAudioRef.current, VOL.battle, resultTrack, VOL.result);
+
+            // Stop battle music immediately
+            gameAudioRef.current.pause();
+
+            // Play result track
+            resultTrack.currentTime = 0;
+            resultTrack.volume = VOL.result;
+            resultTrack.play().catch(() => { });
 
         } else {
             // gameResult === null → reinicio
@@ -404,50 +428,53 @@ const App: React.FC = () => {
                 }
             });
             // 3. Restaurar volumen de batalla, reiniciar desde el principio y reproducir
-            if (gameAudioRef.current) {
+            if (gameAudioRef.current && view === 'game') {
                 gameAudioRef.current.volume = VOL.battle;
                 gameAudioRef.current.currentTime = 0;
-                if (view === 'game') gameAudioRef.current.play().catch(() => { });
+                gameAudioRef.current.play().catch(() => { });
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [gameResult]);
 
-    // React to running state
-    useEffect(() => {
-        if (isRunning) {
-            animationFrameRef.current = requestAnimationFrame(loopRef.current);
-        } else {
-            cancelAnimationFrame(animationFrameRef.current);
-            // Draw one last frame even if paused to update visuals
-            const ctx = canvasRef.current?.getContext('2d');
-            if (ctx) engineRef.current.draw(ctx, config);
-        }
-        return () => cancelAnimationFrame(animationFrameRef.current);
-    }, [isRunning, config]);
+    // Track if entity config has changed to force reset
+    const [configChanged, setConfigChanged] = useState(false);
 
-    // Auto-Restart on Entity Config Change
+    // Auto-Restart on Entity Config Change - MODIFIED: Just set flag, don't auto-restart
     useEffect(() => {
         // Only trigger if entity counts have actually changed by reference
-        // This prevents the effect from running when pausing/resuming or changing view
         if (config.entityCounts === prevEntityCountsRef.current) return;
 
         // Update ref for next comparison
         prevEntityCountsRef.current = config.entityCounts;
 
-        if (view === 'game') {
-            const timer = setTimeout(() => {
-                initializeSystem(true);
-            }, 500); // 500ms debounce to wait for user to finish sliding
-            return () => clearTimeout(timer);
+        if (view === 'game' && hasStarted) {
+            setConfigChanged(true);
+            setIsRunning(false); // Pause game
         }
-    }, [config.entityCounts, view, initializeSystem]);
+    }, [config.entityCounts, view, hasStarted]);
 
     // Handle Reset (Go back to Ready state)
     const handleReset = () => {
         setIsRunning(false);
         setHasStarted(false);
         setGameResult(null);
+        setConfigChanged(false); // Reset flag
+
+        // Reset Music to Battle Track if we were in result screen
+        if (!isMuted && showResultModal) {
+            // Stop result music
+            alliesWinAudioRef.current?.pause();
+            enemiesWinAudioRef.current?.pause();
+            drawAudioRef.current?.pause();
+
+            // Restart battle music
+            if (gameAudioRef.current) {
+                gameAudioRef.current.currentTime = 0;
+                gameAudioRef.current.volume = VOL.battle;
+                gameAudioRef.current.play().catch(() => { });
+            }
+        }
         setShowResultModal(false);
         setIsExploding(false);
         setShowFalloutGrain(false);
@@ -781,7 +808,7 @@ const App: React.FC = () => {
                             hasStarted={hasStarted}
                             isGameOver={!!gameResult}
                             isMuted={isMuted}
-                            onToggleMute={() => setIsMuted(!isMuted)}
+                            onToggleMute={toggleMute}
                             setConfig={setConfig}
                             onTogglePause={() => setIsRunning(!isRunning)}
                             onReset={handleReset}
@@ -796,6 +823,7 @@ const App: React.FC = () => {
                             hasNukeBeenUsed={hasNukeBeenUsed}
                             onTriggerEmergency={handleOmegaProtocol}
                             lcdMessage={getLCDMessage()}
+                            configChanged={configChanged}
                         />
                     </div>
                 </aside>
