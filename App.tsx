@@ -432,131 +432,163 @@ const App: React.FC = () => {
 
     // [AUDIO SYSTEM] - Guard: desbloquear AudioContext en iOS/Safari solo una vez
     const hasUnlockedRef = useRef(false);
+    // Pista que debe estar sonando ahora mismo — fuente de verdad para transiciones
+    const activeTrackRef = useRef<HTMLAudioElement | null>(null);
 
-    // [AUDIO SYSTEM] - Devuelve la pista y el volumen que deben sonar segun el estado actual
-    const getActiveAudio = (): { el: HTMLAudioElement; vol: number } | null => {
-        if (viewRef.current === 'landing') {
-            return landingAudioRef.current ? { el: landingAudioRef.current, vol: VOL.landing } : null;
-        }
-        if (gameResult === 'ALLIES_WIN') return alliesWinAudioRef.current ? { el: alliesWinAudioRef.current, vol: VOL.result } : null;
-        if (gameResult === 'ENEMIES_WIN') return enemiesWinAudioRef.current ? { el: enemiesWinAudioRef.current, vol: VOL.result } : null;
-        if (gameResult !== null) return drawAudioRef.current ? { el: drawAudioRef.current, vol: VOL.result } : null;
-        return gameAudioRef.current ? { el: gameAudioRef.current, vol: VOL.battle } : null;
+    // [AUDIO SYSTEM] - Volumen por defecto de cada pista (para restaurar tras pausar)
+    const getDefaultVol = (el: HTMLAudioElement): number => {
+        if (el === landingAudioRef.current) return VOL.landing;
+        if (el === gameAudioRef.current) return VOL.battle;
+        return VOL.result;
     };
 
-    // [AUDIO SYSTEM] - Botón mute/unmute con fade suave
+    // [AUDIO SYSTEM] - Resuelve qué pista y volumen corresponden al estado dado
+    const resolveTarget = (
+        v: 'landing' | 'game',
+        result: string | null
+    ): { el: HTMLAudioElement; vol: number; reset: boolean } | null => {
+        if (v === 'landing')
+            return landingAudioRef.current
+                ? { el: landingAudioRef.current, vol: VOL.landing, reset: false }
+                : null;
+        if (result === 'ALLIES_WIN' && alliesWinAudioRef.current)
+            return { el: alliesWinAudioRef.current, vol: VOL.result, reset: true };
+        if (result === 'ENEMIES_WIN' && enemiesWinAudioRef.current)
+            return { el: enemiesWinAudioRef.current, vol: VOL.result, reset: true };
+        if (result === 'DRAW' && drawAudioRef.current)
+            return { el: drawAudioRef.current, vol: VOL.result, reset: true };
+        return gameAudioRef.current
+            ? { el: gameAudioRef.current, vol: VOL.battle, reset: false }
+            : null;
+    };
+
+    // [AUDIO SYSTEM] - Botón mute/unmute
+    // IMPORTANTE iOS/Safari: .play() debe llamarse síncronamente dentro del handler
+    // del gesto del usuario. toggleMute ES ese gesto, así que aquí se inicia la pista
+    // correcta directamente. El useEffect unificado se encarga de las transiciones
+    // posteriores (cambio de vista, fin de partida, etc.).
     const toggleMute = () => {
         const newMuted = !isMuted;
         setIsMuted(newMuted);
 
-        const active = getActiveAudio();
-
         if (newMuted) {
-            // Fade-out suave (300 ms) y pausa al terminar; cancela cualquier fade en curso
-            if (active && !active.el.paused) {
-                const el = active.el;
-                const fromVol = el.volume;
-                fadeVolume(el, fromVol, 0, 300, () => {
-                    el.pause();
-                    el.volume = fromVol; // Restaurar para la próxima reproducción
-                });
-            } else {
-                stopFade();
-            }
-        } else {
-            // iOS/Safari: registrar gesto de usuario en todos los elementos para desbloquearlos
-            const allRefs = [landingAudioRef, gameAudioRef, alliesWinAudioRef, enemiesWinAudioRef, drawAudioRef];
-            // Capturar si es la primera vez ANTES de mutar el ref, para calcular el delay correcto
-            const wasLocked = !hasUnlockedRef.current;
-            if (wasLocked) {
-                hasUnlockedRef.current = true;
-                allRefs.forEach(r => {
-                    if (r.current) {
-                        const prev = r.current.volume;
-                        r.current.volume = 0;
-                        r.current.play().catch(() => { }).finally(() => {
-                            r.current!.pause();
-                            r.current!.volume = prev;
-                        });
+            // Silenciar: parar todo de forma inmediata y limpia.
+            stopFade();
+            [landingAudioRef, gameAudioRef, alliesWinAudioRef, enemiesWinAudioRef, drawAudioRef]
+                .forEach(r => {
+                    if (r.current && !r.current.paused) {
+                        r.current.pause();
+                        r.current.volume = getDefaultVol(r.current);
                     }
                 });
+            activeTrackRef.current = null;
+        } else {
+            // Desmutar: pre-calentar TODAS las pistas en el gesto (iOS AudioContext unlock).
+            //
+            // En iOS cada <audio> necesita su propio .play() dentro de un gesto de usuario
+            // para que el navegador le permita reproducirse programáticamente después.
+            // Usamos play() + pause() SÍNCRONOS (sin .then()) para evitar la race condition
+            // donde el callback async pausa una pista que ya arrancó de verdad.
+            // volume=0 garantiza silencio durante el unlock.
+            const target = resolveTarget(view, gameResult);
+
+            if (!hasUnlockedRef.current) {
+                hasUnlockedRef.current = true;
+                [landingAudioRef, gameAudioRef, alliesWinAudioRef, enemiesWinAudioRef, drawAudioRef]
+                    .forEach(r => {
+                        if (r.current && r.current !== target?.el) {
+                            r.current.volume = 0;
+                            r.current.play().catch(() => { }); // unlock iOS — el catch cubre el AbortError
+                            r.current.pause();                 // inmediato y síncrono: sin race condition
+                            r.current.currentTime = 0;
+                            r.current.volume = getDefaultVol(r.current);
+                        }
+                    });
             }
-            // Fade-in suave (400 ms) desde 0 hasta el volumen objetivo.
-            // En el primer unmute esperamos 150ms para que el unlock async (play+pause) termine.
-            const delayMs = wasLocked ? 150 : 0;
-            setTimeout(() => {
-                const a = getActiveAudio();
-                if (!a) return;
-                a.el.volume = 0;
-                a.el.play().catch(() => { });
-                fadeVolume(a.el, 0, a.vol, 400);
-            }, delayMs);
+
+            // Iniciar la pista correcta síncronamente dentro del gesto.
+            if (target) {
+                stopFade();
+                if (target.reset) target.el.currentTime = 0;
+                target.el.volume = 0;
+                target.el.play().catch(() => { });
+                fadeVolume(target.el, 0, target.vol, 400);
+                activeTrackRef.current = target.el;
+            }
         }
     };
 
-    // [AUDIO SYSTEM] - Mantener viewRef sincronizado (evita stale-closure en effects de audio)
-    useEffect(() => { viewRef.current = view; }, [view]);
-
-    // [AUDIO SYSTEM] - Cambiar pista al cambiar de vista con crossfade en ambas direcciones
+    // [AUDIO SYSTEM] - Efecto ÚNICO que sincroniza el audio con el estado de la aplicación.
+    //
+    // Reemplaza los tres efectos separados ([view], [gameResult], [isMuted]) para eliminar:
+    //   • Race conditions entre efectos (p.ej. gameResult=null + view='landing' disparando
+    //     en orden indeterminado y haciendo que la pista de batalla suene brevemente)
+    //   • Estado divergente cuando isMuted=true (los efectos anteriores hacían `return`
+    //     dejando pistas activas sin limpiar, que luego sonaban en contextos incorrectos)
+    //
+    // Invariante: al salir de este efecto, SOLO la pista correcta para (view, gameResult)
+    // está reproduciéndose. Todas las demás están pausadas.
     useEffect(() => {
-        // Saltar el primer render: sin interacción del usuario el navegador bloquea el play()
+        // Primer render: el usuario aún no ha interactuado; el navegador bloquea autoplay.
         if (isFirstRenderRef.current) {
             isFirstRenderRef.current = false;
             return;
         }
-        if (isMuted) return;
 
-        const incoming = view === 'landing' ? landingAudioRef.current : gameAudioRef.current;
-        const outgoing = view === 'landing' ? gameAudioRef.current : landingAudioRef.current;
-        const incomingVol = view === 'landing' ? VOL.landing : VOL.battle;
-        const outgoingDefVol = view === 'landing' ? VOL.battle : VOL.landing;
+        // Mantener viewRef sincronizado (evita stale-closure en otros callbacks)
+        viewRef.current = view;
 
-        if (!incoming || !outgoing) return;
+        const allRefs = [landingAudioRef, gameAudioRef, alliesWinAudioRef, enemiesWinAudioRef, drawAudioRef];
 
-        // resetIncoming=true al ir a 'game': la batalla siempre empieza desde el principio.
-        // stopFade() dentro de crossfade() garantiza que la pista saliente se detenga
-        // aunque el intervalo se interrumpa antes de completarse (bug "landing sigue sonando").
-        crossfade(outgoing, outgoingDefVol, incoming, incomingVol, view === 'game');
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [view]);
-
-    // [AUDIO SYSTEM] - Pista de resultado: crossfade suave al aparecer tarjeta / limpieza al reiniciar
-    useEffect(() => {
-        if (isMuted) return;
-
-        if (gameResult !== null) {
-            const resultTrack =
-                gameResult === 'ALLIES_WIN' ? alliesWinAudioRef.current :
-                    gameResult === 'ENEMIES_WIN' ? enemiesWinAudioRef.current :
-                        drawAudioRef.current;
-
-            if (!resultTrack || !gameAudioRef.current) return;
-
-            // Crossfade suave batalla → resultado (evita el corte abrupto/pop)
-            resultTrack.currentTime = 0;
-            crossfade(gameAudioRef.current, VOL.battle, resultTrack, VOL.result, false);
-
-        } else {
-            // gameResult === null → reinicio
-            // 1. Cancelar fade en curso Y parar pista saliente huérfana
+        if (isMuted) {
+            // toggleMute ya habrá pausado todo de forma imperativa; esto es limpieza
+            // defensiva para cubrir cambios de estado (view/gameResult) mientras se está
+            // silenciado, que de otro modo podrían dejar pistas reproduciéndose en segundo plano.
             stopFade();
-            // 2. Parar pistas de resultado y restaurar volúmenes
-            [alliesWinAudioRef, enemiesWinAudioRef, drawAudioRef].forEach(r => {
-                r.current?.pause();
-                if (r.current) {
-                    r.current.currentTime = 0;
-                    r.current.volume = VOL.result;
-                }
-            });
-            // 3. Reanudar batalla usando viewRef para evitar stale-closure
-            if (gameAudioRef.current && viewRef.current === 'game') {
-                gameAudioRef.current.volume = VOL.battle;
-                gameAudioRef.current.currentTime = 0;
-                gameAudioRef.current.play().catch(() => { });
+            allRefs.forEach(r => r.current?.pause());
+            activeTrackRef.current = null;
+            return;
+        }
+
+        const target = resolveTarget(view, gameResult);
+        if (!target) return;
+
+        const prev = activeTrackRef.current;
+
+        // Parar defensivamente solo las pistas que no son ni la entrante ni la saliente.
+        // NO pausar prev aquí: si está sonando, lo gestionará el crossfade (fade out + pause
+        // al finalizar). Pausarlo antes haría que !prev.paused sea siempre false y el
+        // crossfade nunca se ejecutaría.
+        allRefs.forEach(r => {
+            if (r.current && r.current !== target.el && r.current !== prev && !r.current.paused) {
+                r.current.pause();
+                r.current.volume = getDefaultVol(r.current);
             }
+        });
+
+        if (prev === target.el) {
+            // La pista correcta ya está activa; reanudar si por algún motivo estaba pausada.
+            if (target.el.paused) target.el.play().catch(() => { });
+            return;
+        }
+
+        // Registrar la nueva pista activa antes de la transición
+        activeTrackRef.current = target.el;
+
+        if (prev && !prev.paused) {
+            // Transición con crossfade: la pista anterior aún sonaba
+            if (target.reset) target.el.currentTime = 0;
+            crossfade(prev, getDefaultVol(prev), target.el, target.vol, false);
+        } else {
+            // Sin pista previa activa: fade-in directo
+            stopFade();
+            if (target.reset) target.el.currentTime = 0;
+            target.el.volume = 0;
+            target.el.play().catch(() => { });
+            fadeVolume(target.el, 0, target.vol, 800);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [gameResult]);
+    }, [view, gameResult, isMuted]);
 
     // Track if entity config has changed to force reset
     const [configChanged, setConfigChanged] = useState(false);
@@ -715,7 +747,7 @@ const App: React.FC = () => {
                             className={`
                                 relative border border-space-border shadow-2xl shadow-black bg-black w-full max-w-[98%] md:max-w-[95%] aspect-[3/1] 
                                 ${isExploding ? 'animate-omega-sequence' : 'animate-idle-drift'}
-                             `}
+                            `}
                             style={{
                                 filter: signalPhase === 'noise' ? 'url(#signal-glitch) contrast(1.4) brightness(1.3) saturate(0.8)' :
                                     signalPhase === 'dark' ? 'url(#signal-glitch) contrast(2) brightness(0.2) grayscale(0.8)' :
@@ -927,9 +959,8 @@ const App: React.FC = () => {
                             onStart={runSimulation}
                             onSetDefaults={() => setConfig(DEFAULT_CONFIG)}
                             onAbort={() => {
-                                // Limpiar resultado antes de cambiar vista:
-                                // el useEffect([gameResult]) parará las pistas de resultado
-                                // y el useEffect([view]) luego hará crossfade a la pista de landing.
+                                // El efecto unificado [view, gameResult, isMuted] detectará
+                                // el cambio de vista y hará crossfade a la pista de landing.
                                 setGameResult(null);
                                 setShowResultModal(false);
                                 switchView('landing', () => setIsRunning(false));
