@@ -78,26 +78,12 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
             setLocalCounts(config.entityCounts);
             return;
         }
-
-        // If the game hasn't started yet, we can update the config immediately
-        // and also trigger a reset so the new entities are spawned right away.
-        if (!hasStarted) {
-            setConfig(prev => ({
-                ...prev,
-                entityCounts: localCounts
-            }));
-            // We need to defer the reset slightly to ensure the config state has updated
-            setTimeout(() => {
-                onReset();
-            }, 0);
-        } else {
-            // If the game is running or paused, just update the config state
-            // The user will need to press "APLICAR CAMBIOS Y REINICIAR" to see effects
-            setConfig(prev => ({
-                ...prev,
-                entityCounts: localCounts
-            }));
-        }
+        // Actualizar config siempre. Si la partida no ha empezado, un useEffect en App.tsx
+        // refrescará el canvas silenciosamente. Si ya empezó, aparecerá el banner de reinicio.
+        setConfig(prev => ({
+            ...prev,
+            entityCounts: localCounts
+        }));
     };
 
     const handleEmergencyClick = () => {

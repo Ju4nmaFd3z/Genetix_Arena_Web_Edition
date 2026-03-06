@@ -395,6 +395,18 @@ export class GenetixEngine {
         }
     }
 
+    // Avanza solo las animaciones de muerte sin ejecutar lógica de juego.
+    // Retorna true si aún hay efectos activos, false cuando todos terminaron.
+    tickEffects(): boolean {
+        for (let i = this.listas.efectos.length - 1; i >= 0; i--) {
+            this.listas.efectos[i].tick++;
+            if (this.listas.efectos[i].tick >= this.listas.efectos[i].maxTicks) {
+                this.listas.efectos.splice(i, 1);
+            }
+        }
+        return this.listas.efectos.length > 0;
+    }
+
     update(): string | null {
         this.currentTick++;
         let evento: string | null = null;

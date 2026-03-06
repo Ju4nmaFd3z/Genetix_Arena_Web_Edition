@@ -67,6 +67,8 @@ const App: React.FC = () => {
     const engineRef = useRef<GenetixEngine>(new GenetixEngine());
     const lastTickRef = useRef<number>(0);
     const animationFrameRef = useRef<number>(0);
+    // Indica que la partida terminó pero aún hay animaciones de muerte que completar.
+    const isDrainingRef = useRef(false);
 
     // [GAME LOOP] - Ref para evitar stale closure en requestAnimationFrame.
     // loopRef.current se sobreescribe en cada render, así el RAF siempre
@@ -117,6 +119,7 @@ const App: React.FC = () => {
         }
 
         // Important: We are ready, but NOT running yet
+        isDrainingRef.current = false;
         setHasStarted(false);
         setIsRunning(false);
         setIsExploding(false);
@@ -152,7 +155,18 @@ const App: React.FC = () => {
 
     // 2. Actually Start the Loop (Triggered by button)
     const runSimulation = () => {
-        setGameResult(null); // Ensure result is cleared when starting
+        // Re-inicializar el motor con la config actual para que cualquier cambio de
+        // sliders previo al inicio quede aplicado desde el primer tick.
+        engineRef.current.init(config);
+        setStats(engineRef.current.getStats());
+        setDetailedStats(engineRef.current.getDetailedStats());
+        setTimeout(() => {
+            const ctx = canvasRef.current?.getContext('2d');
+            if (ctx) engineRef.current.draw(ctx, config);
+        }, 0);
+
+        setLogs([]); // Limpiar logs previos al inicio
+        setGameResult(null);
         setHasStarted(true);
         setIsRunning(true);
         addLog(">>> PROTOCOLO DE COMBATE INICIADO <<<", "combat");
@@ -240,6 +254,8 @@ const App: React.FC = () => {
     // [GAME LOOP] - Se asigna a loopRef.current en cada render.
     // Esto garantiza que el RAF siempre ejecute la versión actualizada
     // con los valores más recientes de isRunning y config (sin stale closure).
+    // Modo "drain": cuando la partida termina, continúa solo para completar
+    // las animaciones de muerte antes de detener el loop definitivamente.
     loopRef.current = (timestamp: number) => {
         if (!isRunning) return;
 
@@ -248,27 +264,44 @@ const App: React.FC = () => {
         if (!ctx) return;
 
         if (timestamp - lastTickRef.current > config.renderSpeed) {
-
-            const event = engine.update();
-            if (event) addLog(event, 'combat');
-
-            const result = engine.checkWin();
-            if (result) {
-                setGameResult(result);
-                setShowResultModal(true);
-                setMissionId(Math.floor(Math.random() * 90000 + 10000).toString());
-                setIsRunning(false);
-                addLog(`SIMULACIÓN FINALIZADA. RESULTADO: ${result}`, 'system');
-                engine.draw(ctx, config);
-                setStats(engine.getStats());
-                setDetailedStats(engine.getDetailedStats());
-                return; // ← Corta aquí, no agenda el siguiente frame
-            }
-
-            engine.draw(ctx, config);
-            setStats(engine.getStats());
-            setDetailedStats(engine.getDetailedStats());
             lastTickRef.current = timestamp;
+
+            if (isDrainingRef.current) {
+                // Solo avanzar efectos visuales, sin lógica de juego
+                const stillAnimating = engine.tickEffects();
+                engine.draw(ctx, config);
+                if (!stillAnimating) {
+                    isDrainingRef.current = false;
+                    setIsRunning(false);
+                    return; // No agendar siguiente frame
+                }
+            } else {
+                const event = engine.update();
+                if (event) addLog(event, 'combat');
+
+                const result = engine.checkWin();
+                if (result) {
+                    setGameResult(result);
+                    setShowResultModal(true);
+                    setMissionId(Math.floor(Math.random() * 90000 + 10000).toString());
+                    addLog(`SIMULACIÓN FINALIZADA. RESULTADO: ${result}`, 'system');
+                    setStats(engine.getStats());
+                    setDetailedStats(engine.getDetailedStats());
+                    engine.draw(ctx, config);
+
+                    if (engine.listas.efectos.length > 0) {
+                        // Entrar en modo drain para que las animaciones de muerte terminen
+                        isDrainingRef.current = true;
+                    } else {
+                        setIsRunning(false);
+                        return;
+                    }
+                } else {
+                    engine.draw(ctx, config);
+                    setStats(engine.getStats());
+                    setDetailedStats(engine.getDetailedStats());
+                }
+            }
         }
 
         animationFrameRef.current = requestAnimationFrame(loopRef.current);
@@ -542,6 +575,21 @@ const App: React.FC = () => {
         }
     }, [config.entityCounts, view, hasStarted]);
 
+    // Preview en tiempo real: cuando los sliders cambian antes de iniciar la partida,
+    // reinicializar el motor silenciosamente para reflejar las nuevas unidades en el canvas.
+    useEffect(() => {
+        if (hasStarted || view !== 'game') return;
+        engineRef.current.init(config);
+        setStats(engineRef.current.getStats());
+        setDetailedStats(engineRef.current.getDetailedStats());
+        setTimeout(() => {
+            const ctx = canvasRef.current?.getContext('2d');
+            if (ctx) engineRef.current.draw(ctx, config);
+        }, 0);
+        // Solo config.entityCounts como dependencia — es la única fuente de cambio en este path.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [config.entityCounts]);
+
     // Handle Reset (Go back to Ready state)
     const handleReset = () => {
         setIsRunning(false);
@@ -576,7 +624,7 @@ const App: React.FC = () => {
                     textColor: 'text-space-ally',
                     glow: 'shadow-[0_0_50px_-12px_rgba(16,185,129,0.3)]',
                     title: 'OBJETIVO_CUMPLIDO',
-                    icon: <ShieldAlert size={64} className="text-space-ally drop-shadow-[0_0_15px_rgba(16,185,129,0.4)]" />,
+                    icon: <ShieldAlert className="w-10 h-10 md:w-16 md:h-16 text-space-ally drop-shadow-[0_0_15px_rgba(16,185,129,0.4)]" />,
                     bgGradient: 'from-green-900/10 to-black',
                     stamp: 'CONFIRMADO',
                     classification: 'NIVEL_ALFA'
@@ -587,7 +635,7 @@ const App: React.FC = () => {
                     textColor: 'text-space-enemy',
                     glow: 'shadow-[0_0_50px_-12px_rgba(239,68,68,0.3)]',
                     title: 'MISIÓN_FALLIDA',
-                    icon: <Skull size={64} className="text-space-enemy drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]" />,
+                    icon: <Skull className="w-10 h-10 md:w-16 md:h-16 text-space-enemy drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]" />,
                     bgGradient: 'from-red-900/10 to-black',
                     stamp: 'CRÍTICO',
                     classification: 'FALLO_SISTEMA'
@@ -598,7 +646,7 @@ const App: React.FC = () => {
                     textColor: 'text-yellow-500',
                     glow: 'shadow-[0_0_50px_-12px_rgba(234,179,8,0.3)]',
                     title: 'ESTANCAMIENTO',
-                    icon: <AlertTriangle size={64} className="text-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.4)]" />,
+                    icon: <AlertTriangle className="w-10 h-10 md:w-16 md:h-16 text-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.4)]" />,
                     bgGradient: 'from-yellow-900/10 to-black',
                     stamp: 'DISPUTADO',
                     classification: 'ZONA_GRIS'
@@ -952,13 +1000,13 @@ const App: React.FC = () => {
                             </div>
 
                             {/* Modal Content */}
-                            <div className="p-8 md:p-10 flex flex-col relative z-10 overflow-y-auto">
+                            <div className="p-4 md:p-10 flex flex-col relative z-10 overflow-y-auto">
                                 {/* Tactical Stamp */}
                                 <div className={`absolute top-0 right-10 border-4 ${resultStyles.borderColor} ${resultStyles.textColor} px-4 py-2 font-black text-sm rotate-[12deg] opacity-20 border-double tracking-[0.3em] uppercase pointer-events-none select-none z-0`}>
                                     {resultStyles.stamp}
                                 </div>
 
-                                <div className="flex flex-col md:flex-row items-center md:items-start gap-8 mb-10 relative z-10">
+                                <div className="flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-8 mb-6 md:mb-10 relative z-10">
                                     <div className="relative shrink-0">
                                         <div className={`absolute inset-0 blur-3xl ${resultStyles.textColor} opacity-10`}></div>
                                         <div className={`p-4 border border-white/10 bg-black/40 rounded-sm shadow-2xl`}>
@@ -984,20 +1032,20 @@ const App: React.FC = () => {
                                 </div>
 
                                 {/* Stats Report Grid - More Uniform */}
-                                <div className="grid grid-cols-2 gap-4 w-full mb-8">
-                                    <div className="bg-black/60 p-5 border border-white/5 relative overflow-hidden group">
+                                <div className="grid grid-cols-2 gap-2 md:gap-4 w-full mb-4 md:mb-8">
+                                    <div className="bg-black/60 p-3 md:p-5 border border-white/5 relative overflow-hidden group">
                                         <div className="absolute top-0 left-0 w-1 h-full bg-space-ally opacity-50"></div>
                                         <div className="text-[9px] text-gray-500 uppercase tracking-[0.2em] font-black mb-2">UNIDADES_ACTIVAS</div>
                                         <div className="flex items-baseline gap-2">
-                                            <div className="text-4xl font-mono text-space-ally leading-none tracking-tighter">{stats.allies.toString().padStart(3, '0')}</div>
+                                            <div className="text-2xl md:text-4xl font-mono text-space-ally leading-none tracking-tighter">{stats.allies.toString().padStart(3, '0')}</div>
                                             <div className="text-[10px] text-space-ally/40 font-bold uppercase">UNITS</div>
                                         </div>
                                     </div>
-                                    <div className="bg-black/60 p-5 border border-white/5 relative overflow-hidden group">
+                                    <div className="bg-black/60 p-3 md:p-5 border border-white/5 relative overflow-hidden group">
                                         <div className="absolute top-0 left-0 w-1 h-full bg-space-enemy opacity-50"></div>
                                         <div className="text-[9px] text-gray-500 uppercase tracking-[0.2em] font-black mb-2">HOSTILES_REST.</div>
                                         <div className="flex items-baseline gap-2">
-                                            <div className="text-4xl font-mono text-space-enemy leading-none tracking-tighter">{stats.enemies.toString().padStart(3, '0')}</div>
+                                            <div className="text-2xl md:text-4xl font-mono text-space-enemy leading-none tracking-tighter">{stats.enemies.toString().padStart(3, '0')}</div>
                                             <div className="text-[10px] text-space-enemy/40 font-bold uppercase">UNITS</div>
                                         </div>
                                     </div>

@@ -132,7 +132,7 @@ const StatsDisplay: React.FC<StatsDisplayProps> = ({ stats, missionId = '00000',
                             <Percent size={18} />
                             <span className="text-[10px] uppercase tracking-widest font-bold pt-0.5">TASA_SUPERVIVENCIA</span>
                         </div>
-                        <div className="text-4xl font-mono text-white drop-shadow-[0_0_10px_rgba(16,185,129,0.2)]">{stats.survivalRate}</div>
+                        <div className="text-2xl md:text-4xl font-mono text-white drop-shadow-[0_0_10px_rgba(16,185,129,0.2)]">{stats.survivalRate}</div>
                     </div>
 
                     {/* Lifespans */}
@@ -141,7 +141,7 @@ const StatsDisplay: React.FC<StatsDisplayProps> = ({ stats, missionId = '00000',
                             <Clock size={14} />
                             <span className="text-[9px] uppercase tracking-wider font-bold pt-0.5">VIDA_MEDIA_ALI</span>
                         </div>
-                        <div className="text-2xl font-mono text-space-ally">{stats.averageAllyLifespan} <span className="text-[9px] opacity-50 ml-1">TICKS</span></div>
+                        <div className="text-xl md:text-2xl font-mono text-space-ally">{stats.averageAllyLifespan} <span className="text-[9px] opacity-50 ml-1">TICKS</span></div>
                     </div>
 
                     <div className="bg-[#111316] p-4 border border-white/5 flex flex-col items-center justify-center gap-2 rounded-sm text-center">
@@ -149,7 +149,7 @@ const StatsDisplay: React.FC<StatsDisplayProps> = ({ stats, missionId = '00000',
                             <Skull size={14} />
                             <span className="text-[9px] uppercase tracking-wider font-bold pt-0.5">VIDA_MEDIA_ENE</span>
                         </div>
-                        <div className="text-2xl font-mono text-space-enemy">{stats.averageEnemyLifespan} <span className="text-[9px] opacity-50 ml-1">TICKS</span></div>
+                        <div className="text-xl md:text-2xl font-mono text-space-enemy">{stats.averageEnemyLifespan} <span className="text-[9px] opacity-50 ml-1">TICKS</span></div>
                     </div>
 
                     {/* Damage Stats */}
@@ -158,7 +158,7 @@ const StatsDisplay: React.FC<StatsDisplayProps> = ({ stats, missionId = '00000',
                             <Swords size={14} />
                             <span className="text-[9px] uppercase tracking-wider font-bold pt-0.5">DAÑO_INFLIGIDO</span>
                         </div>
-                        <div className="text-2xl font-mono text-white">{stats.totalDamageDealtByAllies.toLocaleString()}</div>
+                        <div className="text-xl md:text-2xl font-mono text-white">{stats.totalDamageDealtByAllies.toLocaleString()}</div>
                     </div>
 
                     <div className="bg-[#111316] p-4 border border-white/5 flex flex-col items-center justify-center gap-2 rounded-sm text-center">
@@ -166,7 +166,7 @@ const StatsDisplay: React.FC<StatsDisplayProps> = ({ stats, missionId = '00000',
                             <ShieldAlert size={14} />
                             <span className="text-[9px] uppercase tracking-wider font-bold pt-0.5">DAÑO_RECIBIDO</span>
                         </div>
-                        <div className="text-2xl font-mono text-white">{stats.totalDamageDealtByEnemies.toLocaleString()}</div>
+                        <div className="text-xl md:text-2xl font-mono text-white">{stats.totalDamageDealtByEnemies.toLocaleString()}</div>
                     </div>
 
                     {/* Healing */}
@@ -175,7 +175,7 @@ const StatsDisplay: React.FC<StatsDisplayProps> = ({ stats, missionId = '00000',
                             <Heart size={18} />
                             <span className="text-[10px] uppercase tracking-widest font-bold pt-0.5">CURACIÓN_TOTAL</span>
                         </div>
-                        <div className="text-3xl font-mono text-white">{stats.totalHealingDone.toLocaleString()} <span className="text-[10px] opacity-50 ml-1">HP</span></div>
+                        <div className="text-xl md:text-3xl font-mono text-white">{stats.totalHealingDone.toLocaleString()} <span className="text-[10px] opacity-50 ml-1">HP</span></div>
                     </div>
                 </div>
 
