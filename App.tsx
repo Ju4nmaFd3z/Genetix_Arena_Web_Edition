@@ -24,6 +24,18 @@ const DEFAULT_CONFIG: GameConfig = {
 // Declarado fuera del componente para evitar recreación en cada render
 const VOL = { landing: 0.5, battle: 0.4, result: 0.6 };
 
+// Result modal style definition
+interface ResultStyle {
+    borderColor: string;
+    textColor: string;
+    glow: string;
+    title: string;
+    icon: React.ReactNode;
+    bgGradient: string;
+    stamp: string;
+    classification: string;
+}
+
 const App: React.FC = () => {
     const [view, setView] = useState<'landing' | 'game'>('landing');
     const [opacity, setOpacity] = useState(1); // State for transition opacity
@@ -68,8 +80,12 @@ const App: React.FC = () => {
     const enemiesWinAudioRef = useRef<HTMLAudioElement | null>(null);
     const drawAudioRef = useRef<HTMLAudioElement | null>(null);
     const activeFadeRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    // Registra la pista saliente del crossfade activo para poder pararla si se interrumpe
+    const outgoingTrackRef = useRef<{ el: HTMLAudioElement; defaultVol: number } | null>(null);
     const isFirstRenderRef = useRef(true);
     const [isMuted, setIsMuted] = useState(true); // Default to muted
+    // Espejo ref de `view` — permite leer la vista actual sin stale-closure en useEffects de audio
+    const viewRef = useRef<'landing' | 'game'>('landing');
 
     // Ref to track previous entity counts to avoid unnecessary resets on other state changes (like Pause)
     const prevEntityCountsRef = useRef(config.entityCounts);
@@ -93,7 +109,11 @@ const App: React.FC = () => {
 
         if (!autoTrigger) {
             setLogs([]); // Clear logs only on full manual reset
-            setGameResult(null); // Clear result only on manual reset
+            // NO llamamos setGameResult(null) aquí en el path manual:
+            // handleReset ya lo llama antes del setTimeout, lo que dispara
+            // el useEffect de audio exactamente una vez. Llamarlo de nuevo
+            // causaría un doble disparo que resetea currentTime=0 en la
+            // pista de batalla mientras ya está sonando (salto audible).
         }
 
         // Important: We are ready, but NOT running yet
@@ -107,8 +127,20 @@ const App: React.FC = () => {
         if (autoTrigger) {
             addLog(`Reconfiguración detectada. ${config.entityCounts.allies} Aliados vs ${config.entityCounts.enemies} Hostiles.`, "system");
         } else {
-            addLog("Sistemas tácticos cargados. Esperando confirmación manual.", "system");
-            addLog(`Unidades desplegadas: ${config.entityCounts.allies} Aliados, ${config.entityCounts.enemies} Enemigos.`, "info");
+            // If we are resetting because of a config change (even if manual), use the "Reconfiguración" message
+            // We can infer this if the previous entity counts don't match the current ones
+            const prev = prevEntityCountsRef.current;
+            const curr = config.entityCounts;
+            const isConfigChange = prev.allies !== curr.allies || prev.enemies !== curr.enemies || prev.healers !== curr.healers || prev.obstacles !== curr.obstacles;
+
+            if (isConfigChange) {
+                addLog(`Reconfiguración manual detectada. ${curr.allies} Aliados vs ${curr.enemies} Hostiles.`, "system");
+                // Update the ref so subsequent resets without changes show the standard message
+                prevEntityCountsRef.current = curr;
+            } else {
+                addLog("Sistemas tácticos cargados. Esperando confirmación manual.", "system");
+                addLog(`Unidades desplegadas: ${config.entityCounts.allies} Aliados, ${config.entityCounts.enemies} Enemigos.`, "info");
+            }
         }
 
         // Force initial draw
@@ -170,10 +202,8 @@ const App: React.FC = () => {
             setShowFalloutGrain(true);
 
             // Log messages
-            if (Array.isArray(msgs)) {
-                setTimeout(() => { if (msgs[0]) addLog(msgs[0], "combat"); }, 2000);
-                setTimeout(() => { if (msgs[1]) addLog(msgs[1], "combat"); }, 4000);
-            }
+            setTimeout(() => { if (msgs[0]) addLog(msgs[0], "combat"); }, 2000);
+            setTimeout(() => { if (msgs[1]) addLog(msgs[1], "combat"); }, 4000);
 
             // 3.5. SHOW TARGETS (Delayed slightly after the boom flash starts fading)
             // T+5.0s (2s after boom)
@@ -244,6 +274,14 @@ const App: React.FC = () => {
         animationFrameRef.current = requestAnimationFrame(loopRef.current);
     };
 
+    // [GAME LOOP] - Start/Stop Loop based on isRunning
+    useEffect(() => {
+        if (isRunning) {
+            animationFrameRef.current = requestAnimationFrame(loopRef.current);
+        }
+        return () => cancelAnimationFrame(animationFrameRef.current);
+    }, [isRunning]);
+
     // [AUDIO SYSTEM] - Inicializar pistas
     // NOTA: Archivos en /public/tracks/
     useEffect(() => {
@@ -274,29 +312,71 @@ const App: React.FC = () => {
         };
     }, []);
 
-    // [AUDIO SYSTEM] - Cancela el fade activo (si lo hay)
+    // [AUDIO SYSTEM] - Cancela el fade activo y, si habia crossfade a medias,
+    // para y restaura la pista saliente para que no quede reproduciéndose sola.
     const stopFade = () => {
         if (activeFadeRef.current) {
             clearInterval(activeFadeRef.current);
             activeFadeRef.current = null;
         }
+        if (outgoingTrackRef.current) {
+            const { el, defaultVol } = outgoingTrackRef.current;
+            el.pause();
+            el.volume = defaultVol;
+            outgoingTrackRef.current = null;
+        }
+    };
+
+    // [AUDIO SYSTEM] - Fade de un solo elemento (mute/unmute suave).
+    // Cancela cualquier fade en curso antes de iniciar el nuevo.
+    const fadeVolume = (
+        el: HTMLAudioElement,
+        fromVol: number,
+        toVol: number,
+        durationMs: number,
+        onDone?: () => void
+    ) => {
+        if (activeFadeRef.current) {
+            clearInterval(activeFadeRef.current);
+            activeFadeRef.current = null;
+        }
+        const STEPS = 30;
+        const INTERVAL = durationMs / STEPS;
+        let step = 0;
+        el.volume = Math.max(0, Math.min(1, fromVol));
+        activeFadeRef.current = setInterval(() => {
+            step++;
+            const t = step / STEPS;
+            const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+            el.volume = Math.max(0, Math.min(1, fromVol + (toVol - fromVol) * ease));
+            if (step >= STEPS) {
+                clearInterval(activeFadeRef.current!);
+                activeFadeRef.current = null;
+                el.volume = Math.max(0, Math.min(1, toVol));
+                onDone?.();
+            }
+        }, INTERVAL);
     };
 
     // [AUDIO SYSTEM] - Crossfade entre dos pistas
-    // Cancela siempre el fade anterior antes de arrancar uno nuevo (evita race conditions)
+    // Cancela siempre el fade anterior y garantiza que la pista saliente se pare al final.
     const crossfade = (
         outgoing: HTMLAudioElement,
         outgoingDefaultVol: number,
         incoming: HTMLAudioElement,
-        incomingTargetVol: number
+        incomingTargetVol: number,
+        resetIncoming: boolean = false
     ) => {
-        stopFade();
-        const STEPS = 50; // Increased steps for smoothness
-        const DURATION = 2000; // Increased duration to 2s
+        stopFade(); // Para el fade previo Y pausa la pista saliente anterior si habia una
+        const STEPS = 60;
+        const DURATION = 2000;
         const INTERVAL = DURATION / STEPS;
-        const startVol = outgoing.volume; // Partir del volumen real actual
+        const startVol = outgoing.volume;
 
-        incoming.currentTime = 0;
+        // Registrar pista saliente para que stopFade() la pare si se interrumpe
+        outgoingTrackRef.current = { el: outgoing, defaultVol: outgoingDefaultVol };
+
+        if (resetIncoming) incoming.currentTime = 0;
         incoming.volume = 0;
         incoming.play().catch(() => { });
 
@@ -304,68 +384,87 @@ const App: React.FC = () => {
         activeFadeRef.current = setInterval(() => {
             step++;
             const t = step / STEPS;
-            // Use ease-in-out curve for smoother transition
-            const ease = t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-
+            const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
             outgoing.volume = Math.max(0, startVol * (1 - ease));
             incoming.volume = Math.min(incomingTargetVol, incomingTargetVol * ease);
-
             if (step >= STEPS) {
-                stopFade();
+                clearInterval(activeFadeRef.current!);
+                activeFadeRef.current = null;
                 outgoing.pause();
-                outgoing.volume = outgoingDefaultVol; // Restaurar para la próxima vez
+                outgoing.volume = outgoingDefaultVol;
+                outgoingTrackRef.current = null;
             }
         }, INTERVAL);
     };
 
-    // [AUDIO SYSTEM] - Guard: desbloquear elementos de audio solo una vez
+    // [AUDIO SYSTEM] - Guard: desbloquear AudioContext en iOS/Safari solo una vez
     const hasUnlockedRef = useRef(false);
 
-    // [AUDIO SYSTEM] - Botón mute
+    // [AUDIO SYSTEM] - Devuelve la pista y el volumen que deben sonar segun el estado actual
+    const getActiveAudio = (): { el: HTMLAudioElement; vol: number } | null => {
+        if (viewRef.current === 'landing') {
+            return landingAudioRef.current ? { el: landingAudioRef.current, vol: VOL.landing } : null;
+        }
+        if (gameResult === 'ALLIES_WIN') return alliesWinAudioRef.current ? { el: alliesWinAudioRef.current, vol: VOL.result } : null;
+        if (gameResult === 'ENEMIES_WIN') return enemiesWinAudioRef.current ? { el: enemiesWinAudioRef.current, vol: VOL.result } : null;
+        if (gameResult !== null) return drawAudioRef.current ? { el: drawAudioRef.current, vol: VOL.result } : null;
+        return gameAudioRef.current ? { el: gameAudioRef.current, vol: VOL.battle } : null;
+    };
+
+    // [AUDIO SYSTEM] - Botón mute/unmute con fade suave
     const toggleMute = () => {
         const newMuted = !isMuted;
         setIsMuted(newMuted);
 
-        if (newMuted) {
-            stopFade();
-            [landingAudioRef, gameAudioRef, alliesWinAudioRef, enemiesWinAudioRef, drawAudioRef]
-                .forEach(r => r.current?.pause());
-        } else {
-            // En iOS/Safari cada HTMLAudioElement debe recibir play() dentro de un gesto
-            // de usuario para quedar desbloqueado para llamadas futuras desde useEffect.
-            // play() + pause() síncronos registran el gesto sin interferir con la pista
-            // correcta que se reproduce justo después. La promesa rechaza con AbortError
-            // (capturado por el .catch) pero el elemento queda desbloqueado.
-            if (!hasUnlockedRef.current) {
-                hasUnlockedRef.current = true;
-                [landingAudioRef, gameAudioRef, alliesWinAudioRef, enemiesWinAudioRef, drawAudioRef]
-                    .forEach(r => {
-                        if (r.current) {
-                            r.current.play().catch(() => { });
-                            r.current.pause();
-                        }
-                    });
-            }
+        const active = getActiveAudio();
 
-            // Reanudar la pista que corresponde exactamente al estado actual
-            if (view === 'landing') {
-                landingAudioRef.current?.play().catch(() => { });
-            } else if (view === 'game') {
-                if (gameResult === 'ALLIES_WIN') {
-                    alliesWinAudioRef.current?.play().catch(() => { });
-                } else if (gameResult === 'ENEMIES_WIN') {
-                    enemiesWinAudioRef.current?.play().catch(() => { });
-                } else if (gameResult !== null) {
-                    drawAudioRef.current?.play().catch(() => { });
-                } else {
-                    // Si estamos en juego y no hay resultado, música de batalla
-                    gameAudioRef.current?.play().catch(() => { });
-                }
+        if (newMuted) {
+            // Fade-out suave (300 ms) y pausa al terminar; cancela cualquier fade en curso
+            if (active && !active.el.paused) {
+                const el = active.el;
+                const fromVol = el.volume;
+                fadeVolume(el, fromVol, 0, 300, () => {
+                    el.pause();
+                    el.volume = fromVol; // Restaurar para la próxima reproducción
+                });
+            } else {
+                stopFade();
             }
+        } else {
+            // iOS/Safari: registrar gesto de usuario en todos los elementos para desbloquearlos
+            const allRefs = [landingAudioRef, gameAudioRef, alliesWinAudioRef, enemiesWinAudioRef, drawAudioRef];
+            // Capturar si es la primera vez ANTES de mutar el ref, para calcular el delay correcto
+            const wasLocked = !hasUnlockedRef.current;
+            if (wasLocked) {
+                hasUnlockedRef.current = true;
+                allRefs.forEach(r => {
+                    if (r.current) {
+                        const prev = r.current.volume;
+                        r.current.volume = 0;
+                        r.current.play().catch(() => { }).finally(() => {
+                            r.current!.pause();
+                            r.current!.volume = prev;
+                        });
+                    }
+                });
+            }
+            // Fade-in suave (400 ms) desde 0 hasta el volumen objetivo.
+            // En el primer unmute esperamos 150ms para que el unlock async (play+pause) termine.
+            const delayMs = wasLocked ? 150 : 0;
+            setTimeout(() => {
+                const a = getActiveAudio();
+                if (!a) return;
+                a.el.volume = 0;
+                a.el.play().catch(() => { });
+                fadeVolume(a.el, 0, a.vol, 400);
+            }, delayMs);
         }
     };
 
-    // [AUDIO SYSTEM] - Cambiar pista al cambiar de vista con crossfade
+    // [AUDIO SYSTEM] - Mantener viewRef sincronizado (evita stale-closure en effects de audio)
+    useEffect(() => { viewRef.current = view; }, [view]);
+
+    // [AUDIO SYSTEM] - Cambiar pista al cambiar de vista con crossfade en ambas direcciones
     useEffect(() => {
         // Saltar el primer render: sin interacción del usuario el navegador bloquea el play()
         if (isFirstRenderRef.current) {
@@ -381,25 +480,18 @@ const App: React.FC = () => {
 
         if (!incoming || !outgoing) return;
 
-        // Si vamos a game, asegurarnos de que la música de batalla suene
-        if (view === 'game') {
-            stopFade();
-            outgoing.pause();
-            incoming.currentTime = 0;
-            incoming.volume = incomingVol;
-            incoming.play().catch(() => { });
-        } else {
-            crossfade(outgoing, outgoingDefVol, incoming, incomingVol);
-        }
+        // resetIncoming=true al ir a 'game': la batalla siempre empieza desde el principio.
+        // stopFade() dentro de crossfade() garantiza que la pista saliente se detenga
+        // aunque el intervalo se interrumpa antes de completarse (bug "landing sigue sonando").
+        crossfade(outgoing, outgoingDefVol, incoming, incomingVol, view === 'game');
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [view]);
 
-    // [AUDIO SYSTEM] - Pista de resultado: crossfade al aparecer tarjeta / limpieza al reiniciar
+    // [AUDIO SYSTEM] - Pista de resultado: crossfade suave al aparecer tarjeta / limpieza al reiniciar
     useEffect(() => {
         if (isMuted) return;
 
         if (gameResult !== null) {
-            // Seleccionar pista según resultado (cubre ALLIES_WIN, ENEMIES_WIN y cualquier otro = DRAW)
             const resultTrack =
                 gameResult === 'ALLIES_WIN' ? alliesWinAudioRef.current :
                     gameResult === 'ENEMIES_WIN' ? enemiesWinAudioRef.current :
@@ -407,19 +499,15 @@ const App: React.FC = () => {
 
             if (!resultTrack || !gameAudioRef.current) return;
 
-            // Stop battle music immediately
-            gameAudioRef.current.pause();
-
-            // Play result track
+            // Crossfade suave batalla → resultado (evita el corte abrupto/pop)
             resultTrack.currentTime = 0;
-            resultTrack.volume = VOL.result;
-            resultTrack.play().catch(() => { });
+            crossfade(gameAudioRef.current, VOL.battle, resultTrack, VOL.result, false);
 
         } else {
             // gameResult === null → reinicio
-            // 1. Cancelar el fade en curso ANTES de tocar cualquier volumen
+            // 1. Cancelar fade en curso Y parar pista saliente huérfana
             stopFade();
-            // 2. Parar pistas de resultado y restaurar sus volúmenes por defecto
+            // 2. Parar pistas de resultado y restaurar volúmenes
             [alliesWinAudioRef, enemiesWinAudioRef, drawAudioRef].forEach(r => {
                 r.current?.pause();
                 if (r.current) {
@@ -427,8 +515,8 @@ const App: React.FC = () => {
                     r.current.volume = VOL.result;
                 }
             });
-            // 3. Restaurar volumen de batalla, reiniciar desde el principio y reproducir
-            if (gameAudioRef.current && view === 'game') {
+            // 3. Reanudar batalla usando viewRef para evitar stale-closure
+            if (gameAudioRef.current && viewRef.current === 'game') {
                 gameAudioRef.current.volume = VOL.battle;
                 gameAudioRef.current.currentTime = 0;
                 gameAudioRef.current.play().catch(() => { });
@@ -458,26 +546,13 @@ const App: React.FC = () => {
     const handleReset = () => {
         setIsRunning(false);
         setHasStarted(false);
-        setGameResult(null);
-        setConfigChanged(false); // Reset flag
-
-        // Reset Music to Battle Track if we were in result screen
-        if (!isMuted && showResultModal) {
-            // Stop result music
-            alliesWinAudioRef.current?.pause();
-            enemiesWinAudioRef.current?.pause();
-            drawAudioRef.current?.pause();
-
-            // Restart battle music
-            if (gameAudioRef.current) {
-                gameAudioRef.current.currentTime = 0;
-                gameAudioRef.current.volume = VOL.battle;
-                gameAudioRef.current.play().catch(() => { });
-            }
-        }
         setShowResultModal(false);
         setIsExploding(false);
         setShowFalloutGrain(false);
+        setConfigChanged(false);
+        // Poner gameResult a null dispara el useEffect de audio que detiene las pistas
+        // de resultado y reactiva la música de batalla si estamos en la vista de juego.
+        setGameResult(null);
         setTimeout(() => {
             initializeSystem(false);
         }, 50);
@@ -492,17 +567,6 @@ const App: React.FC = () => {
             setTimeout(() => setOpacity(1), 50);
         }, 500); // 500ms fade out duration
     };
-
-    interface ResultStyle {
-        borderColor: string;
-        textColor: string;
-        glow: string;
-        title: string;
-        icon: React.ReactNode;
-        bgGradient: string;
-        stamp: string;
-        classification: string;
-    }
 
     const getResultStyles = (): ResultStyle => {
         switch (gameResult) {
@@ -814,7 +878,14 @@ const App: React.FC = () => {
                             onReset={handleReset}
                             onStart={runSimulation}
                             onSetDefaults={() => setConfig(DEFAULT_CONFIG)}
-                            onAbort={() => switchView('landing', () => setIsRunning(false))}
+                            onAbort={() => {
+                                // Limpiar resultado antes de cambiar vista:
+                                // el useEffect([gameResult]) parará las pistas de resultado
+                                // y el useEffect([view]) luego hará crossfade a la pista de landing.
+                                setGameResult(null);
+                                setShowResultModal(false);
+                                switchView('landing', () => setIsRunning(false));
+                            }}
                             // New Props for Omega Protocol
                             // Omega Protocol se activa cuando quedan ≤3 aliados (umbral más robusto
                             // que exactamente 1, evita que la ventana se cierre si mueren en el mismo tick)
@@ -865,7 +936,7 @@ const App: React.FC = () => {
                                     </div>
                                     <div className="h-6 md:h-8 w-[1px] bg-white/10 mx-1 hidden sm:block"></div>
                                     <button
-                                        onClick={() => setIsMuted(!isMuted)}
+                                        onClick={() => toggleMute()}
                                         className={`transition-colors p-2 rounded-sm flex items-center justify-center ${isMuted ? 'text-gray-600 hover:text-white' : 'text-space-ally hover:bg-space-ally/10'}`}
                                     >
                                         {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
@@ -939,7 +1010,7 @@ const App: React.FC = () => {
                                             <div className="h-[1px] flex-1 bg-white/5"></div>
                                         </div>
                                         <div className="bg-black/20 p-2 border border-white/5">
-                                            <StatsDisplay stats={detailedStats} />
+                                            <StatsDisplay stats={detailedStats} missionId={missionId} gameResult={gameResult} />
                                         </div>
                                     </div>
                                 )}
@@ -982,7 +1053,7 @@ const App: React.FC = () => {
                         </div>
 
                         <div className="p-6">
-                            <StatsDisplay stats={detailedStats} />
+                            <StatsDisplay stats={detailedStats} missionId={missionId} gameResult={gameResult} />
                         </div>
 
                         {/* Scanline */}
@@ -1066,12 +1137,6 @@ const App: React.FC = () => {
                 }
                 .animate-idle-drift {
                     animation: idle-drift 3s ease-in-out infinite;
-                }
-
-                @keyframes fade-out-delayed {
-                    0% { opacity: 1; }
-                    80% { opacity: 1; }
-                    100% { opacity: 0; }
                 }
 
                 @keyframes text-lifecycle {

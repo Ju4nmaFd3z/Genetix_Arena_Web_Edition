@@ -21,7 +21,6 @@ const ChaseAnimation = () => {
         vy: number;
         opacity: number;
         scale: number;
-        hp: number;
     }[]>([]);
 
     // Ref to track entities in the animation loop (avoids stale closures)
@@ -103,7 +102,6 @@ const ChaseAnimation = () => {
             vy,
             opacity: 0,
             scale: 1.1,
-            hp: 100
         };
 
         // Spawn Enemy (chasing)
@@ -116,7 +114,6 @@ const ChaseAnimation = () => {
             vy: vy * 1.05,
             opacity: 0,
             scale: 1.1,
-            hp: 100
         };
 
         setEntities(prev => [...prev, ally, enemy]);
@@ -360,12 +357,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, isMuted, onToggleMut
     };
 
     return (
-        <div className="min-h-screen bg-space-black text-space-text flex flex-col relative overflow-hidden font-sans">
+        <div className="min-h-[100dvh] bg-space-black text-space-text flex flex-col relative overflow-hidden font-sans">
             {/* Background Grid */}
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none"></div>
             <div className="absolute inset-0 bg-grid-pattern bg-[length:50px_50px] opacity-20 pointer-events-none mask-gradient"></div>
 
-            <nav className="relative z-10 flex justify-between items-center p-4 md:px-16 md:py-8 border-b border-space-border/30 backdrop-blur-sm">
+            <nav className="fixed top-0 left-0 right-0 md:relative z-50 flex justify-between items-center p-4 md:px-16 md:py-8 border-b border-space-border/30 backdrop-blur-sm bg-space-black/80 md:bg-transparent">
                 <div className="flex items-center gap-2">
                     <Cpu className="text-white" size={24} />
                     <span className="text-xl font-bold tracking-tighter text-white">GENETIX<span className="font-thin text-gray-400">ARENA</span></span>
@@ -384,7 +381,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, isMuted, onToggleMut
                     </div>}
                 </button>
 
-                <div className={`${isMenuOpen ? 'flex' : 'hidden'} absolute top-full left-0 right-0 bg-space-black/95 border-b border-space-border p-4 flex-col gap-4 md:static md:flex md:flex-row md:bg-transparent md:border-none md:p-0 md:gap-8 text-sm font-medium tracking-widest uppercase cursor-pointer`}>
+                <div className={`${isMenuOpen ? 'flex' : 'hidden'} absolute top-full left-0 right-0 bg-black/95 backdrop-blur-md border-b border-space-border p-4 flex-col gap-4 md:static md:flex md:flex-row md:bg-transparent md:backdrop-blur-none md:border-none md:p-0 md:gap-8 text-sm font-medium tracking-widest uppercase cursor-pointer shadow-2xl md:shadow-none`}>
                     <button onClick={() => { setActiveSection('mission'); setIsMenuOpen(false); }} className={`${activeSection === 'mission' ? 'text-space-ally' : 'text-gray-400'} hover:text-white transition-colors text-left md:text-center`}>Misión</button>
                     <button onClick={() => { setActiveSection('telemetry'); setIsMenuOpen(false); }} className={`${activeSection === 'telemetry' ? 'text-yellow-500' : 'text-gray-400'} hover:text-white transition-colors text-left md:text-center`}>Telemetría</button>
                     <button onClick={() => { setActiveSection('system'); setIsMenuOpen(false); }} className={`${activeSection === 'system' ? 'text-cyan-500' : 'text-gray-400'} hover:text-white transition-colors text-left md:text-center`}>Sistema</button>
@@ -401,7 +398,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, isMuted, onToggleMut
                 </div>
             </nav>
 
-            <main className="flex-1 flex flex-col justify-center px-4 md:px-16 relative z-10 py-8 md:py-0">
+            <main className="flex-1 flex flex-col justify-center px-4 md:px-16 relative z-10 py-24 md:py-4 overflow-y-auto">
                 {activeSection === 'none' && <ChaseAnimation />}
                 {activeSection !== 'none' ? (
                     /* Modal Overlay Content */
@@ -417,7 +414,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, isMuted, onToggleMut
                 ) : (
                     /* Default Landing Content */
                     <div className="max-w-4xl mx-auto md:mx-0 md:max-w-[80%] lg:max-w-[60%] animate-in fade-in duration-500 text-center md:text-left">
-                        <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl xl:text-9xl font-bold tracking-tighter text-white mb-6 leading-none">
+                        <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl xl:text-9xl font-bold tracking-tighter text-white mb-6 md:mt-1 leading-none">
                             SIMULACIÓN <br />
                             DE BATALLA
                         </h1>
@@ -427,7 +424,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, isMuted, onToggleMut
                         </p>
 
                         {/* Buttons Grid - Responsive Layout */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:flex lg:flex-row gap-4 w-full">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:flex lg:flex-row gap-4 w-full pb-8 md:pb-0">
                             <button
                                 onClick={onStart}
                                 className="group bg-white text-black px-6 py-4 font-bold tracking-widest uppercase hover:bg-gray-200 transition-all flex items-center justify-center gap-3 text-sm md:text-base w-full lg:w-auto whitespace-nowrap"
@@ -459,12 +456,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStart, isMuted, onToggleMut
                 )}
             </main>
 
-            <footer className="relative z-10 border-t border-space-border/30 p-4 md:px-16 md:py-8 flex flex-col landscape:flex-row md:flex-row justify-between items-center text-xs text-gray-500 font-mono gap-2 landscape:gap-0 md:gap-0">
-                <div className="text-center landscape:text-left md:text-left">
+            <footer className="fixed bottom-0 left-0 right-0 md:relative z-50 border-t border-space-border/30 p-3 md:px-16 md:py-8 flex flex-row justify-between items-center text-[8px] sm:text-[10px] md:text-xs text-gray-500 font-mono bg-space-black/80 md:bg-transparent backdrop-blur-sm md:backdrop-blur-none">
+                <div className="text-left">
                     <p>ESTADO DEL SISTEMA: PERITA</p>
                     <p>VERSIÓN 3.5 STABLE (2026)</p>
                 </div>
-                <div className="text-center landscape:text-right md:text-right">
+                <div className="text-right">
                     <p className="uppercase tracking-widest">DEV: JUANMA FDEZ</p>
                     <p>&copy; {new Date().getFullYear()} GENETIX</p>
                 </div>

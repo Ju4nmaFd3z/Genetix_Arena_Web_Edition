@@ -78,10 +78,26 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
             setLocalCounts(config.entityCounts);
             return;
         }
-        setConfig(prev => ({
-            ...prev,
-            entityCounts: localCounts
-        }));
+
+        // If the game hasn't started yet, we can update the config immediately
+        // and also trigger a reset so the new entities are spawned right away.
+        if (!hasStarted) {
+            setConfig(prev => ({
+                ...prev,
+                entityCounts: localCounts
+            }));
+            // We need to defer the reset slightly to ensure the config state has updated
+            setTimeout(() => {
+                onReset();
+            }, 0);
+        } else {
+            // If the game is running or paused, just update the config state
+            // The user will need to press "APLICAR CAMBIOS Y REINICIAR" to see effects
+            setConfig(prev => ({
+                ...prev,
+                entityCounts: localCounts
+            }));
+        }
     };
 
     const handleEmergencyClick = () => {
@@ -403,9 +419,31 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                                         <div className={`w-1 h-1 rounded-full ${item.led} shadow-[0_0_4px_currentColor]`}></div>
                                         <span className={`${isError ? 'text-red-500' : 'text-gray-400'} font-bold text-[10px] transition-colors`}>{item.label}</span>
                                     </span>
-                                    <span className={`${isError ? 'text-red-500 font-bold' : 'text-white'} text-[10px] font-mono bg-black px-1 border border-[#333]`}>
-                                        {localCounts[item.key as keyof typeof config.entityCounts].toString().padStart(3, '0')}
-                                    </span>
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        disabled={isRunning}
+                                        value={localCounts[item.key as keyof typeof config.entityCounts].toString().padStart(3, '0')}
+                                        onChange={(e) => {
+                                            // Allow only numbers
+                                            const cleanVal = e.target.value.replace(/[^0-9]/g, '');
+                                            const val = parseInt(cleanVal);
+
+                                            if (!isNaN(val)) {
+                                                handleLocalChange(item.key as keyof typeof config.entityCounts, val);
+                                            }
+                                        }}
+                                        onFocus={(e) => e.target.select()}
+                                        onBlur={commitEntityChanges}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                commitEntityChanges();
+                                                (e.target as HTMLInputElement).blur();
+                                            }
+                                        }}
+                                        className={`${isError ? 'text-red-500 font-bold border-red-500' : 'text-white border-[#333] focus:border-gray-500'} text-[10px] font-mono bg-black px-1 border w-8 text-center outline-none transition-colors`}
+                                    />
                                 </div>
                                 <input
                                     type="range"

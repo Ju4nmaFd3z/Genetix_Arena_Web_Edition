@@ -561,7 +561,7 @@ export class GenetixEngine {
         });
 
 
-        const drawEntity = (entidad: Entity, color: string, type: string) => {
+        const drawEntity = (entidad: Entity, type: string) => {
             // Calculate center of the cell for geometric drawing
             const cx = entidad.getPosX() * this.CELL_SIZE + (this.CELL_SIZE / 2);
             const cy = entidad.getPosY() * this.CELL_SIZE + (this.CELL_SIZE / 2);
@@ -700,10 +700,10 @@ export class GenetixEngine {
             }
         };
 
-        this.listas.obstaculos.forEach(o => drawEntity(o, '', 'obstaculo'));
-        this.listas.aliados.forEach(a => drawEntity(a, '', 'aliado'));
-        this.listas.enemigos.forEach(e => drawEntity(e, '', 'enemigo'));
-        this.listas.curanderos.forEach(c => drawEntity(c, '', 'curandero'));
+        this.listas.obstaculos.forEach(o => drawEntity(o, 'obstaculo'));
+        this.listas.aliados.forEach(a => drawEntity(a, 'aliado'));
+        this.listas.enemigos.forEach(e => drawEntity(e, 'enemigo'));
+        this.listas.curanderos.forEach(c => drawEntity(c, 'curandero'));
     }
 
     getStats() {
